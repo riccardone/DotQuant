@@ -1,0 +1,2 @@
+# DotQuant
+Quantitative trading
