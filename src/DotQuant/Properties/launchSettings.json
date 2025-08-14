@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "DotQuant": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
