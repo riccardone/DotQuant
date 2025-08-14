@@ -5,13 +5,10 @@ It is inspired by [RoboQuant](https://roboquant.org/) (Kotlin) and redesigned wi
 and a pluggable architecture for broker and data feed integration.
 
 ## ✨ Features
-- **Event-driven** trading engine
 - **Feed-factory system** — load market data from built-in or external plugins
-- **Strategy layer** — easily add custom trading strategies
+- **Strategy layer** — add trading strategies
 - **Backtesting** from CSV price data
 - **Live trading support** (via broker plugins, e.g., Interactive Brokers)
-- Clean **DI setup** with `Microsoft.Extensions.Hosting` & `ILogger`
-- Open for extension, closed for modification
 
 ## 📂 Repository Structure
 ```
