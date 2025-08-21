@@ -6,7 +6,7 @@ using DotQuant.Core.Feeds;
 using DotQuant.Core.Feeds.Csv;
 using Microsoft.Extensions.Logging;
 
-namespace DotQuant.FeedFromCsv;
+namespace DotQuant.Feeds.Csv;
 
 /// <summary>
 /// Reads historic price data from CSV files and loads into memory.

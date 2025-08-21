@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace DotQuant.FeedFromCsv;
+namespace DotQuant.Feeds.Csv;
 
 public sealed class CsvFeedFactory : IFeedFactory
 {

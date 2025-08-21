@@ -16,7 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DotQuant.Core\DotQuant.Core.csproj" />
-    <ProjectReference Include="..\DotQuant.FeedFromCsv\DotQuant.FeedFromCsv.csproj" />
+    <ProjectReference Include="..\DotQuant.Feeds.Csv\DotQuant.Feeds.Csv.csproj" />
   </ItemGroup>
 
   <ItemGroup>

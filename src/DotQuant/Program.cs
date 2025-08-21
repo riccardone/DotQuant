@@ -3,7 +3,7 @@ using DotQuant.Core;
 using DotQuant.Core.Common;
 using DotQuant.Core.Feeds;
 using DotQuant.Core.Strategies;
-using DotQuant.FeedFromCsv;
+using DotQuant.Feeds.Csv;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

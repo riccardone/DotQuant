@@ -80,7 +80,12 @@ public class FlexTrader : Trader
         {
             var asset = signal.Asset;
             var hasPosition = account.Positions.TryGetValue(asset, out var position);
-            position ??= Position.Empty();
+            if (signal.Entry && !hasPosition && buyingPower <= 0)
+            {
+                Log(signal, null, Position.Empty(asset), "No buying power available");
+                continue;
+            }
+            position ??= Position.Empty(asset);
 
             if (!evt.Prices.TryGetValue(asset, out var priceItem))
             {
