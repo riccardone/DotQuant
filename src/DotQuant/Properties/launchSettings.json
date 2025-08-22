@@ -1,7 +1,8 @@
 {
   "profiles": {
     "DotQuant": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "--feed av"
     },
     "Container (Dockerfile)": {
       "commandName": "Docker"

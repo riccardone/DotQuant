@@ -2,9 +2,6 @@
 using DotQuant.Core.Common;
 using DotQuant.Core.Feeds;
 using DotQuant.Core.MarketData;
-using DotQuant.Feeds.AlphaVantage.AlphaVantage;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace DotQuant.Feeds.AlphaVantage
@@ -47,24 +44,6 @@ namespace DotQuant.Feeds.AlphaVantage
         public Task Play(ChannelWriter<Event> channel, CancellationToken ct = default)
         {
             throw new NotImplementedException();
-        }
-    }
-
-    public class AlphaVantageFeedFactory : IFeedFactory
-    {
-        public string Key => "av";
-        public string Name => "AlphaVantage Feed";
-
-        public IFeed Create(IServiceProvider sp, IConfiguration config, ILogger logger, IDictionary<string, string?> args)
-        {
-            var priceVolumeProvider = sp.GetRequiredService<IPriceVolumeProvider>();
-            var dataFetcher = sp.GetRequiredService<DataFetcher>();
-            var loggerInstanceForReader = sp.GetRequiredService<ILogger<AlphaVantageDataReader>>();
-            var loggerInstanceForFeed = sp.GetRequiredService<ILogger<AlphaVantageFeed>>();
-
-            var dataReader = new AlphaVantageDataReader(priceVolumeProvider, loggerInstanceForReader, dataFetcher);
-
-            return new AlphaVantageFeed(dataReader, loggerInstanceForFeed);
         }
     }
 }

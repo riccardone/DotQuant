@@ -2,7 +2,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
-namespace DotQuant.Feeds.AlphaVantage;
+namespace DotQuant.Feeds.AlphaVantage.AlphaVantage;
 
 public class DataFetcher 
 {

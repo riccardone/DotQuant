@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace DotQuant.Feeds.AlphaVantage;
+namespace DotQuant.Feeds.AlphaVantage.AlphaVantage;
 
 public class FileDataManager 
 {

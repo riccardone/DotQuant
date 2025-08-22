@@ -1,13 +1,15 @@
-﻿using System.Runtime.Loader;
-using DotQuant.Core;
+﻿using DotQuant.Core;
 using DotQuant.Core.Common;
 using DotQuant.Core.Feeds;
 using DotQuant.Core.Strategies;
+using DotQuant.Feeds.AlphaVantage.AlphaVantage;
 using DotQuant.Feeds.Csv;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
+using DotQuant.Feeds.AlphaVantage;
 
 namespace DotQuant;
 
@@ -20,16 +22,11 @@ internal class Program
         var logger = host.Services.GetRequiredService<ILogger<Program>>();
         logger.LogInformation("Starting DotQuant session...");
 
-        // Parse CLI
-        var feedType = ParseArg(args, "--feed")?.ToLower();
+        var feedType = ParseArg(args, "--feed")?.ToLower() ?? "csv";
         var csvFile = ParseArg(args, "--file");
         var tickersArg = ParseArg(args, "--tickers");
 
-        if (string.IsNullOrWhiteSpace(feedType))
-        {
-            feedType = "csv";
-            logger.LogInformation("No feed specified, defaulting to CSV.");
-        }
+        logger.LogInformation("Feed selected: {Feed}", feedType);
 
         var strategy = host.Services.GetRequiredService<EmaCrossover>();
         var factories = host.Services.GetServices<IFeedFactory>().ToList();
@@ -39,7 +36,8 @@ internal class Program
 
         var factory = factories.FirstOrDefault(f => string.Equals(f.Key, feedType, StringComparison.OrdinalIgnoreCase));
         if (factory is null)
-            throw new ArgumentException($"Invalid feed type: {feedType}. Available: {string.Join(", ", factories.Select(f => f.Key))}");
+            throw new ArgumentException(
+                $"Invalid feed type: {feedType}. Available: {string.Join(", ", factories.Select(f => f.Key))}");
 
         var argsMap = new Dictionary<string, string?>
         {
@@ -57,64 +55,6 @@ internal class Program
 
         logger.LogInformation("Press Enter to exit...");
         Console.ReadLine();
-    }
-
-    private static string? ParseArg(string[] args, string key)
-    {
-        var idx = Array.IndexOf(args, key);
-        return idx >= 0 && idx < args.Length - 1 ? args[idx + 1] : null;
-    }
-
-    private static IHostBuilder CreateHostBuilder(string[] args) =>
-        Host.CreateDefaultBuilder(args)
-            .ConfigureAppConfiguration((ctx, config) =>
-            {
-                config.AddJsonFile("appsettings.json", optional: true)
-                      .AddEnvironmentVariables()
-                      .AddCommandLine(args);
-            })
-            .ConfigureLogging(logging =>
-            {
-                logging.ClearProviders();
-                logging.AddSimpleConsole(o => { o.SingleLine = true; o.TimestampFormat = "yyyy-MM-dd HH:mm:ss.fff "; });
-                logging.SetMinimumLevel(LogLevel.Information);
-                logging.AddFilter("Microsoft.*", LogLevel.Error);
-                logging.AddFilter("System.Net.Http.*", LogLevel.Error);
-            })
-            .ConfigureServices((ctx, services) =>
-            {
-                services.AddSingleton<EmaCrossover>();
-                services.AddSingleton<Worker>();
-
-                // Register factories (first-party + plugins) WITHOUT building a provider
-                RegisterFeedFactories(services);
-            });
-
-    private static void RegisterFeedFactories(IServiceCollection services)
-    {
-        // 1) Built-in
-        services.AddSingleton<IFeedFactory, CsvFeedFactory>();
-
-        // 2) Discover plugins in ./plugins
-        var pluginDir = Path.Combine(AppContext.BaseDirectory, "plugins");
-        if (!Directory.Exists(pluginDir)) return;
-
-        foreach (var dll in Directory.EnumerateFiles(pluginDir, "*.dll"))
-        {
-            try
-            {
-                var asm = AssemblyLoadContext.Default.LoadFromAssemblyPath(dll);
-                var types = asm.GetTypes()
-                    .Where(t => !t.IsAbstract && typeof(IFeedFactory).IsAssignableFrom(t));
-
-                foreach (var t in types)
-                    services.AddSingleton(typeof(IFeedFactory), t);
-            }
-            catch
-            {
-                // Swallow here to avoid DI failures at startup; plugins can log after host builds if desired.
-            }
-        }
     }
 
     private static void PrintAccountSummary(ILogger logger, IAccount account)
@@ -135,6 +75,91 @@ internal class Program
                 logger.LogInformation("  - {Side} {Size} {Symbol} (TIF: {Tif})",
                     order.Buy ? "BUY" : order.Sell ? "SELL" : "FLAT",
                     order.Size.Quantity, order.Asset.Symbol, order.Tif);
+        }
+    }
+
+    private static string? ParseArg(string[] args, string key)
+    {
+        var idx = Array.IndexOf(args, key);
+        return idx >= 0 && idx < args.Length - 1 ? args[idx + 1] : null;
+    }
+
+    private static IConfigurationRoot BuildConfig()
+    {
+        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "dev";
+        return new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: true)
+            .AddJsonFile($"appsettings.{env}.json", optional: true)
+            .AddEnvironmentVariables()
+            .Build();
+    }
+
+    private static IHostBuilder CreateHostBuilder(string[] args) =>
+        Host.CreateDefaultBuilder(args)
+            .ConfigureAppConfiguration((ctx, config) =>
+            {
+                config.AddJsonFile("appsettings.json", optional: true)
+                      .AddEnvironmentVariables()
+                      .AddCommandLine(args);
+            })
+            .ConfigureLogging(logging =>
+            {
+                logging.ClearProviders();
+                logging.AddSimpleConsole(options =>
+                {
+                    options.SingleLine = true;
+                    options.TimestampFormat = "yyyy-MM-dd HH:mm:ss.fff ";
+                });
+                logging.SetMinimumLevel(LogLevel.Information);
+                logging.AddFilter("Microsoft.*", LogLevel.Error);
+                logging.AddFilter("System.Net.Http.*", LogLevel.Error);
+            })
+            .ConfigureServices((ctx, services) =>
+            {
+                var configuration = BuildConfig();
+                services.AddHttpClient();
+
+                var apiKey = configuration["AlphaVantage:ApiKey"];
+                if (!string.IsNullOrWhiteSpace(apiKey))
+                {
+                    services.AddHttpClient("AlphaVantage",
+                            client => { client.BaseAddress = new Uri("https://www.alphavantage.co"); })
+                        .AddHttpMessageHandler(() => new AlphaVantageAuthHandler(apiKey));
+                }
+
+                services.AddSingleton<EmaCrossover>();
+                services.AddSingleton<Worker>();
+                services.AddSingleton<IPriceVolumeProvider, FakePriceVolumeProvider>();
+                services.AddSingleton<DataFetcher>();
+
+                // Discover IFeedFactory types from all loaded assemblies
+                RegisterFeedFactories(services);
+            });
+
+    private static void RegisterFeedFactories(IServiceCollection services)
+    {
+        // Add built-in factory
+        services.AddSingleton<IFeedFactory, CsvFeedFactory>();
+        services.AddSingleton<IFeedFactory, AlphaVantageFeedFactory>();
+
+        var assemblies = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(a => !a.IsDynamic && !string.IsNullOrWhiteSpace(a.Location));
+
+        var factoryTypes = assemblies
+            .SelectMany(a =>
+            {
+                try { return a.GetTypes(); }
+                catch (ReflectionTypeLoadException e) { return e.Types.Where(t => t != null)!; }
+            })
+            .Where(t => t is { IsAbstract: false, IsInterface: false }
+                        && typeof(IFeedFactory).IsAssignableFrom(t)
+                        && t != typeof(CsvFeedFactory))
+            .ToList();
+
+        foreach (var type in factoryTypes)
+        {
+            services.AddSingleton(typeof(IFeedFactory), type);
         }
     }
 }
