@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace DotQuant.Brokers.Trading212;
 
-public class Trading212Broker : Broker
+public class Trading212Broker : IBroker
 {
     private readonly HttpClient _http;
     private readonly ILogger<Trading212Broker> _logger;
@@ -26,7 +26,7 @@ public class Trading212Broker : Broker
         _account = new SimulatedAccount(); // Replace with actual implementation
     }
 
-    public override IAccount Sync(Event evt)
+    public IAccount Sync(Event evt)
     {
         // Optional: Stream position/account changes on each tick
         try
@@ -43,7 +43,7 @@ public class Trading212Broker : Broker
         return _account;
     }
 
-    public override IAccount Sync()
+    public IAccount Sync()
     {
         try
         {
@@ -63,7 +63,7 @@ public class Trading212Broker : Broker
         return _account;
     }
 
-    public override void PlaceOrders(List<Order> orders)
+    public void PlaceOrders(List<Order> orders)
     {
         foreach (var order in orders)
         {

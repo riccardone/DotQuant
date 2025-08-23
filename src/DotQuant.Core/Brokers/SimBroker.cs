@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace DotQuant.Core.Brokers;
 
-public class SimBroker : Broker
+public class SimBroker : IBroker
 {
     private readonly ILogger<SimBroker> _logger;
     private readonly Wallet _initialDeposit;
@@ -39,7 +39,7 @@ public class SimBroker : Broker
     public SimBroker(ILogger<SimBroker> logger, decimal deposit, string currencyCode = "USD")
         : this(logger, new Wallet(new Amount(Currency.GetInstance(currencyCode), deposit))) { }
 
-    public override IAccount Sync(Event? e = null)
+    public IAccount Sync(Event? e = null)
     {
         lock (this)
         {
@@ -76,9 +76,9 @@ public class SimBroker : Broker
         }
     }
 
-    public override IAccount Sync() => _account.ToAccount();
+    public IAccount Sync() => _account.ToAccount();
 
-    public override void PlaceOrders(List<Order> orders)
+    public void PlaceOrders(List<Order> orders)
     {
         lock (this)
         {

@@ -11,19 +11,24 @@ namespace DotQuant.Core;
 
 public class Worker
 {
-    public static IAccount Run(ILoggerFactory loggerFactory, IFeed feed, IStrategy strategy, Journal? journal = null,
-        Trader? trader = null, Timeframe? timeframe = null, Broker? broker = null, EventChannel? eventChannel = null,
-        int timeoutMillis = -1, bool showProgressBar = false)
+    public static IAccount Run(
+        ILoggerFactory loggerFactory,
+        IFeed feed,
+        IStrategy strategy,
+        IBroker broker, // Required now
+        Journal? journal = null,
+        Trader? trader = null,
+        Timeframe? timeframe = null,
+        EventChannel? eventChannel = null,
+        int timeoutMillis = -1,
+        bool showProgressBar = false)
     {
         var logger = loggerFactory.CreateLogger<Worker>();
-        broker ??= new SimBroker(loggerFactory.CreateLogger<SimBroker>(), 100000.0m, "EUR");
+
         trader ??= new FlexTrader(logger: loggerFactory.CreateLogger<FlexTrader>());
         timeframe ??= Timeframe.Infinite;
         eventChannel ??= new EventChannel(timeframe);
-        journal ??= new BasicJournal(
-            loggerFactory.CreateLogger<BasicJournal>(),
-            logProgress: true
-        );
+        journal ??= new BasicJournal(loggerFactory.CreateLogger<BasicJournal>(), logProgress: true);
 
         using var cts = new CancellationTokenSource();
 
@@ -34,18 +39,18 @@ public class Worker
             cts.Cancel();
         };
 
-        return RunAsync(feed, strategy, journal, trader, timeframe, broker, eventChannel, timeoutMillis,
-                showProgressBar, logger, cts.Token)
+        return RunAsync(feed, strategy, journal, trader, timeframe, broker, eventChannel,
+                        timeoutMillis, showProgressBar, logger, cts.Token)
             .GetAwaiter().GetResult();
     }
 
     private static async Task<IAccount> RunAsync(
         IFeed feed,
         IStrategy strategy,
-        Journal? journal,
+        Journal journal,
         Trader trader,
         Timeframe timeframe,
-        Broker broker,
+        IBroker broker,
         EventChannel eventChannel,
         int timeoutMillis,
         bool showProgressBar,
@@ -77,20 +82,22 @@ public class Worker
 
                     progressBar?.Update(evt.Time);
 
-                    var signals = strategy.CreateSignals(evt) ?? [];
+                    var signals = strategy.CreateSignals(evt) ?? new List<Signal>();
+
                     if (signals.Any())
                     {
                         var summary = string.Join(", ", signals.Select(s =>
-                            $"{s.Asset.Symbol} {s.Type}({s.Intent}) Dir={s.Rating:+0.0;-0.0;0}")
-                        );
-                        logger.LogInformation("Signals at {time} [{count}]: {summary}", evt.Time, signals.Count, summary);
+                            $"{s.Asset.Symbol} {s.Type}({s.Intent}) Dir={s.Rating:+0.0;-0.0;0}"));
+                        logger.LogInformation("Signals at {time} [{count}]: {summary}",
+                            evt.Time, signals.Count, summary);
                     }
-                    var account = broker.Sync(); 
-                    var orders = trader.CreateOrders(signals, account, evt);
+
+                    var preTradeAccount = broker.Sync();
+                    var orders = trader.CreateOrders(signals, preTradeAccount, evt);
                     broker.PlaceOrders(orders);
 
-                    account = broker.Sync(evt);
-                    journal?.Track(evt, account, signals, orders);
+                    var postTradeAccount = broker.Sync(evt);
+                    journal.Track(evt, postTradeAccount, signals, orders);
                 }
             }
         }
