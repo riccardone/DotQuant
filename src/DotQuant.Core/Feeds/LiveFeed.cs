@@ -71,7 +71,7 @@ public abstract class LiveFeed : IFeed
     /// <summary>
     /// Start playing to the given channel (registers it and waits for its close).
     /// </summary>
-    public async Task Play(ChannelWriter<Event> channel, CancellationToken ct = default)
+    public virtual async Task Play(ChannelWriter<Event> channel, CancellationToken ct = default)
     {
         lock (_lock)
         {

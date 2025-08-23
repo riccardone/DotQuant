@@ -2,7 +2,7 @@
   "profiles": {
     "DotQuant": {
       "commandName": "Project",
-      "commandLineArgs": "--feed av"
+      "commandLineArgs": "--feed av --tickers AAPL,MSFT"
     },
     "Container (Dockerfile)": {
       "commandName": "Docker"

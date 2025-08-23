@@ -1,49 +1,86 @@
 ﻿using System.Threading.Channels;
 using DotQuant.Core.Common;
 using DotQuant.Core.Feeds;
-using DotQuant.Core.MarketData;
 using Microsoft.Extensions.Logging;
 
 namespace DotQuant.Feeds.AlphaVantage
 {
-    public class AlphaVantageFeed : IFeed
+    /// <summary>
+    /// A feed that replays AlphaVantage historical data into DotQuant's event stream.
+    /// </summary>
+    public class AlphaVantageFeed : LiveFeed
     {
+        private static readonly Currency USD = Currency.GetInstance("USD");
+        public static readonly string Source = "alphavantage";
+
         private readonly IDataReader _dataReader;
         private readonly ILogger<AlphaVantageFeed> _logger;
+        private readonly string[] _tickers;
+        private readonly DateTime _start;
+        private readonly DateTime _end;
+        private readonly TimeSpan _timeSpan;
 
-        public string Source => "alphavantage";
-
-        public AlphaVantageFeed(IDataReader dataReader, ILogger<AlphaVantageFeed> logger)
+        public AlphaVantageFeed(
+            IDataReader dataReader,
+            ILogger<AlphaVantageFeed> logger,
+            string[] tickers,
+            DateTime start,
+            DateTime end,
+            TimeSpan? timeSpan = null) // Allow override if needed
         {
             _dataReader = dataReader;
             _logger = logger;
+            _tickers = tickers;
+            _start = start;
+            _end = end;
+            _timeSpan = timeSpan ?? TimeSpan.FromDays(1); // Default to daily bars
         }
 
-        public IEnumerable<Tick> GetHistoricalTicks(string ticker, DateTime start, DateTime end)
+        public override async Task Play(ChannelWriter<Event> channel, CancellationToken ct = default)
         {
-            if (!_dataReader.TryGetPrices(ticker, start, end, out var prices))
+            try
             {
-                _logger.LogWarning("No price data available for {Ticker} from {Start} to {End}", ticker, start, end);
-                return Enumerable.Empty<Tick>();
+                foreach (var ticker in _tickers)
+                {
+                    ct.ThrowIfCancellationRequested();
+
+                    if (!_dataReader.TryGetPrices(ticker, _start, _end, out var prices))
+                    {
+                        _logger.LogWarning("No price data for {Ticker} from {Start} to {End}", ticker, _start, _end);
+                        continue;
+                    }
+
+                    var asset = new Stock(ticker, USD);
+
+                    foreach (var price in prices)
+                    {
+                        ct.ThrowIfCancellationRequested();
+
+                        var priceItem = new PriceItem(
+                            asset,
+                            open: price.Open,
+                            high: price.High,
+                            low: price.Low,
+                            close: price.Close,
+                            volume: price.Volume,
+                            timeSpan: _timeSpan
+                        );
+
+                        var evt = new Event(price.Date, new List<PriceItem> { priceItem });
+
+                        await channel.WriteAsync(evt, ct);
+                        _logger.LogDebug("Emitted event for {Ticker} at {Time}", ticker, price.Date);
+                    }
+                }
             }
-
-            return prices.Select(p => new Tick(
-                Symbol: ticker,
-                Exchange: "N/A",  // Modify if exchange data becomes available
-                Currency: "USD",  // Adjust if dynamic currency detection is added
-                Timestamp: p.Date,
-                BidPrice: null,
-                AskPrice: null,
-                LastPrice: p.Close,
-                BidSize: null,
-                AskSize: null,
-                LastSize: p.Volume
-            ));
-        }
-
-        public Task Play(ChannelWriter<Event> channel, CancellationToken ct = default)
-        {
-            throw new NotImplementedException();
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("AlphaVantageFeed playback cancelled.");
+            }
+            finally
+            {
+                channel.TryComplete();
+            }
         }
     }
 }

@@ -78,24 +78,39 @@ internal class Program
         var feed = feedFactory.Create(host.Services, config, logger, argsMap);
 
         // Run session
+        var startingCash = broker.Sync().CashAmount;
+
         var account = Worker.Run(loggerFactory, feed, strategy, broker);
-        PrintAccountSummary(logger, account);
+        PrintAccountSummary(logger, account, startingCash);
 
         logger.LogInformation("Press Enter to exit...");
         Console.ReadLine();
     }
 
-    private static void PrintAccountSummary(ILogger logger, IAccount account)
+    private static void PrintAccountSummary(ILogger logger, IAccount account, Amount startingCash)
     {
-        logger.LogInformation("Final Account Summary:");
-        logger.LogInformation("Cash: {Cash}", account.Cash);
-        logger.LogInformation("Buying Power: {BuyingPower}", account.BuyingPower);
+        var endingCash = account.CashAmount;
+        var pnl = endingCash - startingCash;
+        var pnlStr = pnl.Value >= 0 ? $"+{pnl}" : pnl.ToString();
 
-        logger.LogInformation("Positions:");
-        foreach (var (asset, pos) in account.Positions)
+        logger.LogInformation("====== Final Account Summary ======");
+        logger.LogInformation("Starting Cash: {StartingCash}", startingCash);
+        logger.LogInformation("Final Cash:    {EndingCash}", endingCash);
+        logger.LogInformation("Net PnL:       {PnL}", pnlStr);
+        logger.LogInformation("Buying Power:  {BuyingPower}", account.BuyingPower);
+
+        if (account.Positions.Any())
         {
-            logger.LogInformation("  - {Symbol}: {Size} units @ {AvgPrice} (Market: {MarketPrice})",
-                asset.Symbol, pos.Size.Quantity, pos.AveragePrice, pos.MarketPrice);
+            logger.LogInformation("Open Positions:");
+            foreach (var (asset, pos) in account.Positions)
+            {
+                logger.LogInformation("  - {Symbol}: {Size} units @ {AvgPrice} (Market: {MarketPrice})",
+                    asset.Symbol, pos.Size.Quantity, pos.AveragePrice, pos.MarketPrice);
+            }
+        }
+        else
+        {
+            logger.LogInformation("No open positions.");
         }
 
         if (account.Orders.Any())
@@ -108,6 +123,12 @@ internal class Program
                     order.Size.Quantity, order.Asset.Symbol, order.Tif);
             }
         }
+        else
+        {
+            logger.LogInformation("No open orders.");
+        }
+
+        logger.LogInformation("===================================");
     }
 
     private static string? ParseArg(string[] args, string key)
