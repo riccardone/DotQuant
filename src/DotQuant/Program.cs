@@ -27,19 +27,20 @@ internal class Program
         using var host = CreateHostBuilder(args).Build();
 
         var logger = host.Services.GetRequiredService<ILogger<Program>>();
+
+        logger.LogInformation("Starting DotQuant session...");
+
         var config = host.Services.GetRequiredService<IConfiguration>();
         var loggerFactory = host.Services.GetRequiredService<ILoggerFactory>();
 
         if (args.Contains("--list-brokers", StringComparer.OrdinalIgnoreCase))
         {
             var registry = host.Services.GetRequiredService<IBrokerFactoryRegistry>();
-            Console.WriteLine("Available brokers:");
+            logger.LogInformation("Available brokers:");
             foreach (var factory in registry.All)
-                Console.WriteLine($"- {factory.Key}: {factory.DisplayName} — {factory.Description}");
+                logger.LogInformation($"- {factory.Key}: {factory.DisplayName} — {factory.Description}");
             return;
         }
-
-        logger.LogInformation("Starting DotQuant session...");
 
         var argsMap = BuildArgsMap(args);
         var feedType = argsMap.GetValueOrDefault("--feed")?.ToLower() ?? "csv";
