@@ -1,11 +1,13 @@
-﻿using DotQuant.Core.Feeds.Model;
+﻿using DotQuant.Core.Common;
+using DotQuant.Core.Feeds.Model;
 
 namespace DotQuant.Core.Feeds;
 
+/// <summary>
+/// Interface for reading price data (historical and live) for a given symbol.
+/// </summary>
 public interface IDataReader
 {
-    bool TryGetPrices(string ticker, DateTime startDate, DateTime endDate, out IEnumerable<Price>? prices);
-    bool TryGetFinancialMetrics(string ticker, DateTime endDate, string period, int limit, out IEnumerable<FinancialMetrics>? metrics);
-    bool TryGetFinancialLineItems(string ticker, DateTime endDate, string period, int limit, out IEnumerable<FinancialLineItem>? financialLineItems);
-    bool TryGetCompanyNews(string ticker, out IEnumerable<NewsSentiment>? newsSentiments);
+    bool TryGetPrices(Symbol symbol, DateTime startDate, DateTime endDate, out IEnumerable<Price>? prices);
+    bool TryGetLatestPrice(Symbol symbol, out Price? price);
 }

@@ -1,4 +1,6 @@
-﻿using DotQuant.Core.Feeds;
+﻿using DotQuant.Core.Common;
+using DotQuant.Core.Feeds;
+using DotQuant.Core.Services;
 using DotQuant.Feeds.AlphaVantage.AlphaVantage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,56 +15,80 @@ public class AlphaVantageFeedFactory : IFeedFactory
 
     public IFeed Create(IServiceProvider sp, IConfiguration config, ILogger logger, IDictionary<string, string?> args)
     {
-        // Get and validate API key
         var apiKey = config["AlphaVantage:ApiKey"];
         if (string.IsNullOrWhiteSpace(apiKey))
-        {
             throw new InvalidOperationException("AlphaVantage API key is required. Set AlphaVantage:ApiKey in appsettings.");
-        }
 
-        // Parse tickers (required)
-        var tickersArg = args.TryGetValue("--tickers", out var rawTickers) ? rawTickers : null;
-        if (string.IsNullOrWhiteSpace(tickersArg))
-        {
+        if (!args.TryGetValue("--tickers", out var rawTickers) || string.IsNullOrWhiteSpace(rawTickers))
             throw new ArgumentException("Missing required --tickers argument (comma-separated list)");
-        }
 
-        var tickers = tickersArg.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (tickers.Length == 0)
-        {
+        var symbols = rawTickers
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(ParseSymbol)
+            .ToArray();
+
+        if (symbols.Length == 0)
             throw new ArgumentException("No valid tickers provided in --tickers argument");
-        }
 
-        // Start/end date from config or fallback
-        var start = ParseDate(args, config, "Start", fallback: DateTime.UtcNow.AddYears(-1));
-        var end = ParseDate(args, config, "End", fallback: DateTime.UtcNow);
+        var isLive = args.TryGetValue("--live", out var liveArg) &&
+                     (liveArg?.Equals("true", StringComparison.OrdinalIgnoreCase) == true);
 
-        // Optional: support custom TimeSpan
-        var timeSpan = TimeSpan.FromDays(1); // Could make this dynamic if needed later
+        var start = isLive ? DateTime.UtcNow : ParseDate(args, config, "Start", DateTime.UtcNow.AddYears(-1));
+        var end = isLive ? DateTime.UtcNow : ParseDate(args, config, "End", DateTime.UtcNow);
+        var pollingInterval = ParseTimeSpan(args, config, "PollingInterval", TimeSpan.FromMinutes(1));
 
-        // Resolve services
+        logger.LogInformation("AlphaVantageFeed mode: {Mode}", isLive ? "LIVE" : "HISTORICAL");
+
         var priceVolumeProvider = sp.GetRequiredService<IPriceVolumeProvider>();
         var dataFetcher = sp.GetRequiredService<DataFetcher>();
         var loggerForReader = sp.GetRequiredService<ILogger<AlphaVantageDataReader>>();
         var loggerForFeed = sp.GetRequiredService<ILogger<AlphaVantageFeed>>();
+        var marketStatus = sp.GetRequiredService<IMarketStatusService>();
 
         var dataReader = new AlphaVantageDataReader(priceVolumeProvider, loggerForReader, dataFetcher);
 
-        return new AlphaVantageFeed(dataReader, loggerForFeed, tickers, start, end, timeSpan);
+        return new AlphaVantageFeed(
+            dataReader,
+            loggerForFeed,
+            symbols,
+            start,
+            end,
+            isLiveMode: isLive,
+            pollingInterval: pollingInterval,
+            marketStatusService: marketStatus
+        );
+    }
+
+    private static Symbol ParseSymbol(string input)
+    {
+        var parts = input.Split('.', 2);
+        if (parts.Length != 2)
+            throw new ArgumentException($"Invalid symbol format: '{input}'. Expected format TICKER.EXCHANGE");
+
+        return new Symbol(parts[0], parts[1]);
     }
 
     private static DateTime ParseDate(IDictionary<string, string?> args, IConfiguration config, string key, DateTime fallback)
     {
-        // Try CLI arg first
-        if (args.TryGetValue($"--{key.ToLower()}", out var fromArgs) && DateTime.TryParse(fromArgs, out var parsedFromArgs))
-            return parsedFromArgs;
+        if (args.TryGetValue($"--{key.ToLower()}", out var argValue) && DateTime.TryParse(argValue, out var fromArgs))
+            return fromArgs;
 
-        // Then config
-        var fromConfig = config[$"AlphaVantage:{key}"];
-        if (!string.IsNullOrWhiteSpace(fromConfig) && DateTime.TryParse(fromConfig, out var parsedFromConfig))
+        var configValue = config[$"AlphaVantage:{key}"];
+        if (!string.IsNullOrWhiteSpace(configValue) && DateTime.TryParse(configValue, out var fromConfig))
+            return fromConfig;
+
+        return fallback;
+    }
+
+    private static TimeSpan ParseTimeSpan(IDictionary<string, string?> args, IConfiguration config, string key, TimeSpan fallback)
+    {
+        if (args.TryGetValue($"--{key.ToLower()}", out var argValue) && TimeSpan.TryParse(argValue, out var parsedSpan))
+            return parsedSpan;
+
+        var configValue = config[$"AlphaVantage:{key}"];
+        if (!string.IsNullOrWhiteSpace(configValue) && TimeSpan.TryParse(configValue, out var parsedFromConfig))
             return parsedFromConfig;
 
-        // Fallback
         return fallback;
     }
 }

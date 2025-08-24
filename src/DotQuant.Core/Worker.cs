@@ -1,11 +1,12 @@
-﻿using System.Text;
-using DotQuant.Core.Brokers;
+﻿using DotQuant.Core.Brokers;
 using DotQuant.Core.Common;
 using DotQuant.Core.Feeds;
 using DotQuant.Core.Journals;
 using DotQuant.Core.Strategies;
 using DotQuant.Core.Traders;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
+using System.Text;
 
 namespace DotQuant.Core;
 
@@ -89,7 +90,7 @@ public class Worker
                         var summary = string.Join(", ", signals.Select(s =>
                             $"{s.Asset.Symbol} {s.Type}({s.Intent}) Dir={s.Rating:+0.0;-0.0;0}"));
                         logger.LogInformation("Signals at {time} [{count}]: {summary}",
-                            evt.Time, signals.Count, summary);
+                            evt.Time.Date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture), signals.Count, summary);
                     }
 
                     var preTradeAccount = broker.Sync();

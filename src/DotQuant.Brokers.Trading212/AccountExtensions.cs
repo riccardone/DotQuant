@@ -9,7 +9,7 @@ public static class AccountExtensions
         if (t212 == null || account is not SimulatedAccount sim)
             return;
 
-        var currency = new Currency(t212.Currency);
+        var currency = Currency.GetInstance(t212.Currency);
         var amount = new Amount(currency, t212.FreeFunds);
 
         sim.Cash = new Wallet(amount);
@@ -25,8 +25,9 @@ public static class AccountExtensions
 
         foreach (var p in positions)
         {
-            var currency = new Currency(p.Currency);
-            var asset = new Stock(p.Ticker, currency);
+            var currency = Currency.GetInstance(p.Currency);
+            var symbol = new Symbol(p.Ticker, "T212"); // You may want to dynamically determine the exchange
+            var asset = new Stock(symbol, currency);
             var size = new Size(p.Quantity);
 
             var marketValue = new Wallet(new Amount(currency, p.CurrentPrice * p.Quantity));

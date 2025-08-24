@@ -1,10 +1,12 @@
-﻿namespace DotQuant.Core.Feeds;
+﻿using DotQuant.Core.Common;
+
+namespace DotQuant.Core.Feeds;
 
 public class FakePriceVolumeProvider : IPriceVolumeProvider
 {
     private readonly Random _random = new();
 
-    public decimal? GetVolume(string ticker, DateTime date)
+    public decimal? GetVolume(Symbol symbol, DateTime date)
     {
         // Return a realistic random volume between 1M and 10M
         return _random.Next(1_000_000, 10_000_000);

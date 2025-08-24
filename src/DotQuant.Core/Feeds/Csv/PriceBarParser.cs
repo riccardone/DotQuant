@@ -78,11 +78,14 @@ public class PriceBarParser : IPriceParser
     public PriceItem Parse(string[] line, IAsset asset)
     {
         var currencyCode = _currency != -1 ? line[_currency].Trim().ToUpperInvariant() : null;
-        var currency = currencyCode != null ? Currency.GetInstance(currencyCode) : Currency.USD; 
+        var currency = currencyCode != null ? Currency.GetInstance(currencyCode) : Currency.USD;
 
-        var enrichedAsset = (currencyCode != null && asset is Stock s)
-            ? new Stock(s.Symbol, currency)
-            : asset;
+        // Re-wrap the asset with updated currency if it's a Stock
+        var enrichedAsset = asset switch
+        {
+            Stock s => new Stock(s.symbol, currency),
+            _ => asset
+        };
 
         var open = decimal.Parse(line[_open], CultureInfo.InvariantCulture);
         var high = decimal.Parse(line[_high], CultureInfo.InvariantCulture);

@@ -1,8 +1,9 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 
 namespace DotQuant.Feeds.AlphaVantage.AlphaVantage;
 
-public class FileDataManager 
+public class FileDataManager
 {
     private readonly string _storageFolder;
     private readonly JsonSerializerOptions _jsonOptions;
@@ -23,7 +24,7 @@ public class FileDataManager
     {
         var path = GetFilePath(key);
         var json = JsonSerializer.Serialize(data, _jsonOptions);
-        File.WriteAllText(path, json);
+        File.WriteAllText(path, json, Encoding.UTF8);
     }
 
     public T? Read<T>(string key)
@@ -32,13 +33,41 @@ public class FileDataManager
         if (!File.Exists(path))
             return default;
 
-        var json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<T>(json, _jsonOptions);
+        try
+        {
+            var json = File.ReadAllText(path, Encoding.UTF8);
+            return JsonSerializer.Deserialize<T>(json, _jsonOptions);
+        }
+        catch
+        {
+            return default;
+        }
+    }
+
+    public void SaveRawJson(string json, string key)
+    {
+        var path = GetFilePath(key);
+        File.WriteAllText(path, json, Encoding.UTF8);
+    }
+
+    public string? ReadRawJson(string key)
+    {
+        var path = GetFilePath(key);
+        if (!File.Exists(path))
+            return null;
+
+        return File.ReadAllText(path, Encoding.UTF8);
     }
 
     private string GetFilePath(string key)
     {
-        var safeKey = key.Replace(":", "_").Replace("/", "_").Replace("?", "_").Replace("&", "_").Replace("=", "_");
+        var safeKey = string.Join("_", key.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries))
+            .Replace(":", "_")
+            .Replace("/", "_")
+            .Replace("?", "_")
+            .Replace("&", "_")
+            .Replace("=", "_");
+
         return Path.Combine(_storageFolder, $"{safeKey}.json");
     }
 }
