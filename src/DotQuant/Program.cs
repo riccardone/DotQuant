@@ -205,7 +205,7 @@ internal class Program
                     }).AddHttpMessageHandler(() => new AlphaVantageAuthHandler(apiKey));
                 }
 
-                services.AddHttpClient<IMarketStatusService, OpenAiMarketStatusService>();
+                services.AddHttpClient<IMarketStatusService, MarketStatusService>();
 
                 services.AddSingleton<Worker>();
                 services.AddSingleton<IPriceVolumeProvider, FakePriceVolumeProvider>();
