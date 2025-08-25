@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Feeds.AlphaVantage
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Feeds.Csv", "DotQuant.Feeds.Csv\DotQuant.Feeds.Csv.csproj", "{9C1EF296-D79B-40CC-AE77-5A564136CD8C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Feeds.YahooFinance", "DotQuant.Feeds.YahooFinance\DotQuant.Feeds.YahooFinance.csproj", "{88E15707-D6DE-4C9E-99AB-777184FAC753}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{9C1EF296-D79B-40CC-AE77-5A564136CD8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9C1EF296-D79B-40CC-AE77-5A564136CD8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9C1EF296-D79B-40CC-AE77-5A564136CD8C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{88E15707-D6DE-4C9E-99AB-777184FAC753}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{88E15707-D6DE-4C9E-99AB-777184FAC753}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{88E15707-D6DE-4C9E-99AB-777184FAC753}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{88E15707-D6DE-4C9E-99AB-777184FAC753}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

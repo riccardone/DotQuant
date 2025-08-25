@@ -10,6 +10,7 @@ using DotQuant.Core.Strategies;
 using DotQuant.Feeds.AlphaVantage;
 using DotQuant.Feeds.AlphaVantage.AlphaVantage;
 using DotQuant.Feeds.Csv;
+using DotQuant.Feeds.YahooFinance;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -218,6 +219,9 @@ internal class Program
                 services.AddSingleton<IBrokerFactoryRegistry, BrokerFactoryRegistry>();
                 services.AddSingleton<IFeedFactory, CsvFeedFactory>();
                 services.AddSingleton<IFeedFactory, AlphaVantageFeedFactory>();
+                services.AddSingleton<IFeedFactory, YahooFinanceFeedFactory>();
+
+                services.Configure<YahooFinanceOptions>(configuration.GetSection("YahooFinance"));
 
                 RegisterDynamicPlugins(services);
             });

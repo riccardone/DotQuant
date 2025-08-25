@@ -20,6 +20,7 @@
     <ProjectReference Include="..\DotQuant.Core\DotQuant.Core.csproj" />
     <ProjectReference Include="..\DotQuant.Feeds.AlphaVantage\DotQuant.Feeds.AlphaVantage.csproj" />
     <ProjectReference Include="..\DotQuant.Feeds.Csv\DotQuant.Feeds.Csv.csproj" />
+    <ProjectReference Include="..\DotQuant.Feeds.YahooFinance\DotQuant.Feeds.YahooFinance.csproj" />
   </ItemGroup>
 
   <ItemGroup>

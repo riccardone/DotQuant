@@ -2,7 +2,7 @@
   "profiles": {
     "DotQuant": {
       "commandName": "Project",
-      "commandLineArgs": "--feed av --broker trading212 --tickers AAPL.NASDAQ,MSFT.NASDAQ --live --interval 00:01:00\r\n"
+      "commandLineArgs": "--feed yahoo --broker trading212 --tickers AAPL.NASDAQ,MSFT.NASDAQ,ENI.MTA --live --interval 00:01:00\r\n"
     },
     "Container (Dockerfile)": {
       "commandName": "Docker"
