@@ -13,8 +13,8 @@ public class YahooFinanceFeedFactory : IFeedFactory
 
     public IFeed Create(IServiceProvider sp, IConfiguration config, ILogger logger, IDictionary<string, string?> args)
     {
-        var symbols = args.ContainsKey("symbols")
-            ? args["symbols"]
+        var symbols = args.ContainsKey("--tickers")
+            ? args["--tickers"]
                 ?.Split(',')
                 .Select(s =>
                 {
@@ -22,9 +22,9 @@ public class YahooFinanceFeedFactory : IFeedFactory
                     return new Symbol(parts[0], parts[1]);
                 })
                 .ToArray() ?? Array.Empty<Symbol>()
-            : throw new ArgumentException("Missing 'symbols' argument for YahooFinanceFeed");
+            : throw new ArgumentException("Missing 'tickers' argument for YahooFinanceFeed");
 
-        var start = args.TryGetValue("start", out var startStr) && DateTime.TryParse(startStr, out var s) ? s : DateTime.UtcNow.AddDays(-5);
+        var start = args.TryGetValue("start", out var startStr) && DateTime.TryParse(startStr, out var s) ? s : DateTime.UtcNow;
         var end = args.TryGetValue("end", out var endStr) && DateTime.TryParse(endStr, out var e) ? e : DateTime.UtcNow;
 
         var live = args.TryGetValue("live", out var liveStr) && bool.TryParse(liveStr, out var isLive) && isLive;

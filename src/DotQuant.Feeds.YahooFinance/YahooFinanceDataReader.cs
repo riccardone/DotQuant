@@ -9,9 +9,13 @@ namespace DotQuant.Feeds.YahooFinance;
 /// <summary>
 /// Reads historical and latest price data from Yahoo Finance.
 /// </summary>
-public class YahooFinanceDataReader(IOptions<YahooFinanceOptions> options) : IDataReader
+public class YahooFinanceDataReader() : IDataReader
 {
-    private readonly YahooFinanceOptions _options = options.Value;
+    private readonly YahooFinanceOptions _options = new()
+    {
+        MaxRetries = 3,
+        ThrottleMs = 500
+    };
 
     public bool TryGetPrices(Symbol symbol, DateTime startDate, DateTime endDate, out IEnumerable<Price>? prices)
     {

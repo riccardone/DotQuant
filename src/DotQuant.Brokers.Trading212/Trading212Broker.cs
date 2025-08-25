@@ -1,35 +1,31 @@
-﻿using System.Net.Http.Json;
+﻿using DotQuant.Core.Brokers;
+using DotQuant.Core.Common;
+using DotQuant.Core.Services;
+using Microsoft.Extensions.Logging;
 using System.Text;
 using System.Text.Json;
-using DotQuant.Core.Brokers;
-using DotQuant.Core.Common;
-using Microsoft.Extensions.Logging;
 
 namespace DotQuant.Brokers.Trading212;
 
 public class Trading212Broker : IBroker
 {
     private readonly HttpClient _http;
+    private readonly RateLimitedHttpClient _rateLimiter;
     private readonly ILogger<Trading212Broker> _logger;
     private readonly string _apiBaseUrl;
-    private readonly string _authToken;
-    private IAccount _account;
+    private readonly IAccount _account;
 
     public Trading212Broker(HttpClient httpClient, ILogger<Trading212Broker> logger, string authToken, bool useDemo = true)
     {
         _http = httpClient;
         _logger = logger;
-        _authToken = authToken;
 
-        _apiBaseUrl = useDemo
-            ? "https://demo.trading212.com"
-            : "https://api.trading212.com";
-
-        // Trading212 demo API requires raw token in Authorization header (no "Bearer")
+        _apiBaseUrl = useDemo ? "https://demo.trading212.com" : "https://api.trading212.com";
         _http.DefaultRequestHeaders.Remove("Authorization");
-        _http.DefaultRequestHeaders.Add("Authorization", _authToken);
+        _http.DefaultRequestHeaders.Add("Authorization", authToken);
 
-        _account = new SimulatedAccount(); // Replace with actual account implementation
+        _rateLimiter = new RateLimitedHttpClient(_http, _logger);
+        _account = new SimulatedAccount();
     }
 
     public IAccount Sync(Event evt)
@@ -37,11 +33,11 @@ public class Trading212Broker : IBroker
         try
         {
             var url = $"{_apiBaseUrl}/api/v0/equity/positions";
-            var positions = _http
-                .GetFromJsonAsync<List<Trading212Position>>(url)
-                .Result;
+            var positions = _rateLimiter.GetJsonWithBackoff<List<Trading212Position>>(url, "positions", 30).GetAwaiter()
+                .GetResult();
 
-            _account.UpdatePositions(positions);
+            if (positions != null)
+                _account.UpdatePositions(positions);
         }
         catch (Exception ex)
         {
@@ -56,33 +52,18 @@ public class Trading212Broker : IBroker
         try
         {
             var url = $"{_apiBaseUrl}/api/v0/equity/account/cash";
-            var response = _http.GetAsync(url).Result;
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var msg = $"Account sync failed: {response.StatusCode}";
-                _logger.LogError(msg);
-                throw new InvalidOperationException(msg);
-            }
-
-            var accountJson = response.Content.ReadAsStringAsync().Result;
-            var accountData = JsonSerializer.Deserialize<Trading212Account>(accountJson);
+            var accountData = _rateLimiter.GetJsonWithBackoff<Trading212Account>(url, "cash", 5).GetAwaiter()
+                .GetResult();
 
             if (accountData == null)
-            {
-                throw new InvalidOperationException("Account data is null.");
-            }
+                throw new InvalidOperationException("Account data fetch failed.");
 
             _account.UpdateFrom(accountData);
-            
-            _logger.LogInformation(
-                "Account synced: Balance={Balance:C}, FreeFunds={FreeFunds:C}, PnL={PnL:C}, Invested={Invested:C}",
-                accountData.Balance, accountData.FreeFunds, accountData.PnL, accountData.Invested);
+            _logger.LogInformation("Synced account: Balance={Balance}, FreeFunds={FreeFunds}", accountData.Balance, accountData.FreeFunds);
         }
         catch (Exception ex)
         {
-            _logger.LogCritical(ex, "Fatal error during account Sync()");
-            throw;
+            _logger.LogError(ex, "Error during Sync()");
         }
 
         return _account;
@@ -108,11 +89,11 @@ public class Trading212Broker : IBroker
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 var url = $"{_apiBaseUrl}/api/v0/equity/orders";
-                var resp = _http.PostAsync(url, content).Result;
+                var resp = _http.PostAsync(url, content).GetAwaiter().GetResult();
 
                 if (!resp.IsSuccessStatusCode)
                 {
-                    var err = resp.Content.ReadAsStringAsync().Result;
+                    var err = resp.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                     _logger.LogWarning("Order failed: {Order} => {Error}", order, err);
                 }
             }
