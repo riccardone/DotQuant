@@ -44,7 +44,7 @@ public class AlphaVantageFeed : LiveFeed
         _timeSpan = _pollingInterval;
     }
 
-    public override async Task Play(ChannelWriter<Event> channel, CancellationToken ct = default)
+    public override async Task PlayAsync(ChannelWriter<Event> channel, CancellationToken ct = default)
     {
         try
         {

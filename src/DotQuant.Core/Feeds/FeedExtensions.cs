@@ -14,7 +14,7 @@ public static class FeedExtensions
     {
         var channel = Channel.CreateUnbounded<Event>();
         var results = new List<(DateTimeOffset, T)>();
-        var playTask = feed.PlayBackground(channel.Writer, ct);
+        var playTask = feed.PlayBackgroundAsync(channel.Writer, ct);
 
         try
         {
@@ -44,7 +44,7 @@ public static class FeedExtensions
     ) where T : IItem
     {
         var channel = Channel.CreateUnbounded<Event>();
-        var playTask = feed.PlayBackground(channel.Writer, ct);
+        var playTask = feed.PlayBackgroundAsync(channel.Writer, ct);
 
         try
         {
@@ -69,7 +69,7 @@ public static class FeedExtensions
     )
     {
         var channel = Channel.CreateUnbounded<Event>();
-        var playTask = feed.PlayBackground(channel.Writer, ct);
+        var playTask = feed.PlayBackgroundAsync(channel.Writer, ct);
 
         try
         {
@@ -93,7 +93,7 @@ public static class FeedExtensions
     {
         var channel = Channel.CreateUnbounded<Event>();
         var results = new List<Event>();
-        var playTask = feed.PlayBackground(channel.Writer, ct);
+        var playTask = feed.PlayBackgroundAsync(channel.Writer, ct);
 
         try
         {
@@ -120,7 +120,7 @@ public static class FeedExtensions
     )
     {
         var channel = Channel.CreateUnbounded<Event>();
-        var playTask = feed.PlayBackground(channel.Writer, ct);
+        var playTask = feed.PlayBackgroundAsync(channel.Writer, ct);
 
         var lastPrices = new Dictionary<IAsset, decimal>();
         var errors = new List<(DateTimeOffset, PriceItem)>();

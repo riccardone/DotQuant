@@ -8,6 +8,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DotQuant.Core\DotQuant.Core.csproj" />
+    <ProjectReference Include="..\DotQuant.Feeds.EodHistoricalData\DotQuant.Feeds.EodHistoricalData.csproj" />
+    <ProjectReference Include="..\DotQuant.Feeds.YahooFinance\DotQuant.Feeds.YahooFinance.csproj" />
   </ItemGroup>
 
 </Project>

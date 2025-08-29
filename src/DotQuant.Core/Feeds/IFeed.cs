@@ -18,30 +18,30 @@ public interface IFeed : IAsyncDisposable
     /// </summary>
     /// <param name="channel">The channel to write events into.</param>
     /// <param name="ct">Optional cancellation token.</param>
-    Task Play(ChannelWriter<Event> channel, CancellationToken ct = default);
+    Task PlayAsync(ChannelWriter<Event> channel, CancellationToken ct = default);
 
     /// <summary>
     /// Replay events into an EventChannel's writer (convenience overload).
     /// </summary>
-    Task Play(EventChannel eventChannel, CancellationToken ct = default)
-        => Play(eventChannel.Writer, ct);
+    Task PlayAsync(EventChannel eventChannel, CancellationToken ct = default)
+        => PlayAsync(eventChannel.Writer, ct);
 
     /// <summary>
     /// Starts event replay in the background using the given channel.
     /// Automatically completes the channel when done.
     /// </summary>
-    Task PlayBackground(ChannelWriter<Event> channel, CancellationToken ct = default)
+    Task PlayBackgroundAsync(ChannelWriter<Event> channel, CancellationToken ct = default)
         => Task.Run(async () =>
         {
-            await Play(channel, ct);
+            await PlayAsync(channel, ct);
             channel.Complete();
         }, ct);
 
     /// <summary>
     /// Starts event replay in the background using an EventChannel.
     /// </summary>
-    Task PlayBackground(EventChannel eventChannel, CancellationToken ct = default)
-        => PlayBackground(eventChannel.Writer, ct);
+    Task PlayBackgroundAsync(EventChannel eventChannel, CancellationToken ct = default)
+        => PlayBackgroundAsync(eventChannel.Writer, ct);
 
     /// <summary>
     /// Asynchronously dispose of feed resources (default is no-op).

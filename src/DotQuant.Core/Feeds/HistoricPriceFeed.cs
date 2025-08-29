@@ -50,7 +50,7 @@ public class HistoricPriceFeed : IHistoricFeed
     /// <summary>
     /// Play events into channel (replay).
     /// </summary>
-    public async Task Play(ChannelWriter<Event> channel, CancellationToken ct = default)
+    public async Task PlayAsync(ChannelWriter<Event> channel, CancellationToken ct = default)
     {
         foreach (var kvp in _events)
         {

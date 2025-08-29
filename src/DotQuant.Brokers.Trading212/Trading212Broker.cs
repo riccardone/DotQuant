@@ -33,11 +33,16 @@ public class Trading212Broker : IBroker
         try
         {
             var url = $"{_apiBaseUrl}/api/v0/equity/positions";
-            var positions = _rateLimiter.GetJsonWithBackoff<List<Trading212Position>>(url, "positions", 30).GetAwaiter()
-                .GetResult();
+            var positions = _rateLimiter
+                .GetJsonWithBackoff<List<Trading212Position>>(url, "positions", 30)
+                .GetAwaiter().GetResult();
 
             if (positions != null)
                 _account.UpdatePositions(positions);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("404"))
+        {
+            _logger.LogInformation("Positions endpoint not available in demo mode.");
         }
         catch (Exception ex)
         {

@@ -63,7 +63,7 @@ public class Worker
 
         logger.LogInformation("Starting trading session...");
 
-        var feedTask = feed.PlayBackground(eventChannel, token);
+        var feedTask = feed.PlayBackgroundAsync(eventChannel, token);
         ProgressBar? progressBar = null;
 
         if (showProgressBar)
