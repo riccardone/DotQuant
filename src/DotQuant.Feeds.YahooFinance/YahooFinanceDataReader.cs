@@ -2,15 +2,14 @@
 using DotQuant.Core.Common;
 using DotQuant.Core.Feeds;
 using DotQuant.Core.Feeds.Model;
+using Microsoft.Extensions.Logging;
 
 namespace DotQuant.Feeds.YahooFinance;
 
-/// <summary>
-/// Reads historical and latest price data from Yahoo's v8/chart API.
-/// </summary>
-public class YahooFinanceDataReader() : IDataReader
+public class YahooFinanceDataReader(ILogger<YahooFinanceDataReader> logger) : IDataReader
 {
     private static readonly HttpClient _httpClient = new();
+    private readonly ILogger<YahooFinanceDataReader> _logger = logger;
     private readonly int _maxRetries = 3;
     private readonly int _throttleMs = 500;
 
@@ -28,12 +27,10 @@ public class YahooFinanceDataReader() : IDataReader
             string ticker = symbol.ToString();
             string url;
 
-            // Use "range=" for recent timeframes (less than 30 days)
             var daysRange = (endDate.Date - startDate.Date).TotalDays;
 
             if (daysRange <= 30 && endDate.Date >= DateTime.UtcNow.Date.AddDays(-30))
             {
-                // Choose appropriate range string for Yahoo
                 string range = daysRange switch
                 {
                     <= 5 => "5d",
@@ -46,25 +43,31 @@ public class YahooFinanceDataReader() : IDataReader
             }
             else
             {
-                // Use explicit timestamps for older/historical ranges
                 long period1 = new DateTimeOffset(startDate.Date).ToUnixTimeSeconds();
-                long period2 = new DateTimeOffset(endDate.Date.AddDays(1)).ToUnixTimeSeconds(); // ensure period2 > period1
+                long period2 = new DateTimeOffset(endDate.Date.AddDays(1)).ToUnixTimeSeconds();
                 url = $"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&period1={period1}&period2={period2}";
             }
 
+            _logger.LogDebug("[Yahoo] Fetching historical prices from URL: {Url}", url);
             var json = _httpClient.GetStringAsync(url).Result;
+
             var parsedPrices = ParseChartPrices(json);
-
             if (parsedPrices == null)
+            {
+                _logger.LogWarning("[Yahoo] Could not parse historical data for {Symbol}", symbol);
                 return false;
+            }
 
-            // Filter to the exact range the caller asked for
-            prices = parsedPrices.Where(p => p.Date.Date >= startDate.Date && p.Date.Date <= endDate.Date).ToList();
+            prices = parsedPrices
+                .Where(p => p.Date.Date >= startDate.Date && p.Date.Date <= endDate.Date)
+                .ToList();
+
+            _logger.LogInformation("[Yahoo] Retrieved {Count} prices for {Symbol}", prices.Count(), symbol);
             return prices.Any();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[Yahoo] Failed to fetch prices for {symbol}: {ex.Message}");
+            _logger.LogError(ex, "[Yahoo] Failed to fetch historical prices for {Symbol}", symbol);
             return false;
         }
     }
@@ -72,40 +75,54 @@ public class YahooFinanceDataReader() : IDataReader
     public bool TryGetLatestPrice(Symbol symbol, out Price? price)
     {
         price = null;
+        string ticker = symbol.ToString();
 
         for (int attempt = 1; attempt <= _maxRetries; attempt++)
         {
             try
             {
-                string ticker = symbol.ToString();
-                string url = BuildChartUrlWithRange(ticker, "5d", "1d");
+                var url = $"https://query1.finance.yahoo.com/v7/finance/quote?symbols={ticker}";
+                _logger.LogDebug("[Yahoo] Fetching real-time quote from URL: {Url}", url);
 
                 var json = _httpClient.GetStringAsync(url).Result;
-                var prices = ParseChartPrices(json);
 
-                price = prices?.LastOrDefault();
-                return price != null;
+                using var doc = JsonDocument.Parse(json);
+                var quote = doc.RootElement
+                    .GetProperty("quoteResponse")
+                    .GetProperty("result")[0];
+
+                var priceObj = new Price
+                {
+                    Date = DateTimeOffset.FromUnixTimeSeconds(quote.GetProperty("regularMarketTime").GetInt64()).UtcDateTime,
+                    Open = quote.GetProperty("regularMarketOpen").GetDecimal(),
+                    High = quote.GetProperty("regularMarketDayHigh").GetDecimal(),
+                    Low = quote.GetProperty("regularMarketDayLow").GetDecimal(),
+                    Close = quote.GetProperty("regularMarketPrice").GetDecimal(),
+                    Volume = quote.TryGetProperty("regularMarketVolume", out var volumeProp) && volumeProp.ValueKind != JsonValueKind.Null
+                        ? volumeProp.GetInt64()
+                        : 0
+                };
+
+                price = priceObj;
+
+                _logger.LogInformation("[Yahoo] Real-time price for {Symbol}: {Price} at {Time}",
+                    symbol, price.Close, price.Date);
+
+                return true;
             }
             catch (Exception ex) when (attempt < _maxRetries)
             {
-                Console.WriteLine($"[Yahoo] Retry {attempt} failed for {symbol}: {ex.Message}");
+                _logger.LogWarning(ex, "[Yahoo] Retry {Attempt}/{Max} failed for {Symbol}", attempt, _maxRetries, symbol);
                 Thread.Sleep(_throttleMs);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[Yahoo] Failed to fetch real-time quote for {Symbol}", symbol);
+                return false;
             }
         }
 
         return false;
-    }
-
-    private static string BuildChartUrlWithPeriods(string ticker, DateTime from, DateTime to, string interval)
-    {
-        long period1 = new DateTimeOffset(from).ToUnixTimeSeconds();
-        long period2 = new DateTimeOffset(to).ToUnixTimeSeconds();
-        return $"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval={interval}&period1={period1}&period2={period2}";
-    }
-
-    private static string BuildChartUrlWithRange(string ticker, string range, string interval)
-    {
-        return $"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval={interval}&range={range}";
     }
 
     private static IEnumerable<Price>? ParseChartPrices(string json)
@@ -148,7 +165,7 @@ public class YahooFinanceDataReader() : IDataReader
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[Yahoo] Failed to parse response: {ex.Message}");
+            // No logger here – parse fallback
             return null;
         }
     }

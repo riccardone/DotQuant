@@ -75,30 +75,41 @@ public class Worker
 
         try
         {
-            while (await eventChannel.Reader.WaitToReadAsync(token))
+            while (!token.IsCancellationRequested)
             {
-                while (eventChannel.Reader.TryRead(out var evt))
+                if (await eventChannel.Reader.WaitToReadAsync(token))
                 {
-                    if (evt == null) continue;
-
-                    progressBar?.Update(evt.Time);
-
-                    var signals = strategy.CreateSignals(evt) ?? new List<Signal>();
-
-                    if (signals.Any())
+                    while (eventChannel.Reader.TryRead(out var evt))
                     {
-                        var summary = string.Join(", ", signals.Select(s =>
-                            $"{s.Asset.Symbol} {s.Type}({s.Intent}) Dir={s.Rating:+0.0;-0.0;0}"));
-                        logger.LogInformation("Signals at {time} [{count}]: {summary}",
-                            evt.Time.Date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture), signals.Count, summary);
+                        if (evt == null) continue;
+
+                        progressBar?.Update(evt.Time);
+
+                        var signals = strategy.CreateSignals(evt) ?? new List<Signal>();
+
+                        foreach (var priceItem in evt.Prices)
+                        {
+                            logger.LogInformation("Tick: {Symbol} @ {Price} (Time: {Time})",
+                                priceItem.Value.Asset.Symbol,
+                                priceItem.Value.Close,
+                                evt.Time.UtcDateTime.ToString("HH:mm:ss"));
+                        }
+
+                        if (signals.Any())
+                        {
+                            var summary = string.Join(", ", signals.Select(s =>
+                                $"{s.Asset.Symbol} {s.Type}({s.Intent}) Dir={s.Rating:+0.0;-0.0;0}"));
+                            logger.LogInformation("Signals at {time} [{count}]: {summary}",
+                                evt.Time.Date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture), signals.Count, summary);
+                        }
+
+                        var preTradeAccount = broker.Sync();
+                        var orders = trader.CreateOrders(signals, preTradeAccount, evt);
+                        broker.PlaceOrders(orders);
+
+                        var postTradeAccount = broker.Sync(evt);
+                        journal.Track(evt, postTradeAccount, signals, orders);
                     }
-
-                    var preTradeAccount = broker.Sync();
-                    var orders = trader.CreateOrders(signals, preTradeAccount, evt);
-                    broker.PlaceOrders(orders);
-
-                    var postTradeAccount = broker.Sync(evt);
-                    journal.Track(evt, postTradeAccount, signals, orders);
                 }
             }
         }

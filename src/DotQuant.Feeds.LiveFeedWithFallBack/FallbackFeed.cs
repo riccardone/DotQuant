@@ -1,45 +1,86 @@
-﻿using System.Threading.Channels;
-using DotQuant.Core.Common;
+﻿using DotQuant.Core.Common;
 using DotQuant.Core.Feeds;
 using DotQuant.Feeds.EodHistoricalData;
 using DotQuant.Feeds.YahooFinance;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
+using System.Threading.Channels;
 
 namespace DotQuant.Feeds.LiveFeedWithFallBack;
 
-/// <summary>
-/// A live feed that attempts to use EODHistoricalDataFeed first,
-/// and falls back to YahooFinanceFeed if that fails.
-/// </summary>
 public class FallbackFeed : IFeed
 {
-    private readonly YahooFinanceFeed _yahooFinanceFeed;
-    private readonly EodHistoricalDataFeed _eodHistoricalDataFeed;
-    private readonly ILogger<FallbackFeed> _logger;
+    private readonly ILogger _logger;
+    private readonly List<IFeed> _feeds;
 
-    public FallbackFeed(YahooFinanceFeed yahoo, EodHistoricalDataFeed eod, ILogger<FallbackFeed> logger)
+    public FallbackFeed(ILogger logger, IEnumerable<IFeed> feeds)
     {
         _logger = logger;
-        _yahooFinanceFeed = yahoo;
-        _eodHistoricalDataFeed = eod;
+        _feeds = feeds.ToList();
     }
 
-    public async Task PlayAsync(ChannelWriter<Event> channel, CancellationToken ct = default)
+    public async Task PlayAsync(ChannelWriter<Event> writer, CancellationToken cancellationToken)
     {
-        try
+        if (_feeds.Count == 0)
+            throw new InvalidOperationException("No feeds provided to fallback wrapper.");
+
+        // Assume all feeds share the same symbol set (for now)
+        while (!cancellationToken.IsCancellationRequested)
         {
-            _logger.LogInformation("Attempting primary feed (EOD Historical Data)");
-            await _eodHistoricalDataFeed.PlayAsync(channel, ct);
+            var symbols = GetAllSymbols(_feeds.First()); // Helper to extract symbol list
+
+            foreach (var symbol in symbols)
+            {
+                bool success = false;
+
+                foreach (var feed in _feeds)
+                {
+                    try
+                    {
+                        await feed.PlayAsyncForSymbol(writer, cancellationToken, symbol);
+                        success = true;
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Feed {FeedType} failed for {Symbol}", feed.GetType().Name, symbol);
+                    }
+                }
+
+                if (!success)
+                {
+                    _logger.LogError("All feeds failed for symbol {Symbol}", symbol);
+                }
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken); // or configurable
         }
-        catch (HttpRequestException ex) when ((int?)ex.StatusCode == 404)
+    }
+
+    private static string[] GetAllSymbols(IFeed feed)
+    {
+        // Assumes feed exposes symbols via reflection or internal prop
+        var symbolsField = feed.GetType().GetField("_symbols", BindingFlags.NonPublic | BindingFlags.Instance);
+        return symbolsField?.GetValue(feed) as string[] ?? Array.Empty<string>();
+    }
+}
+
+public static class FeedExtensions
+{
+    public static async Task PlayAsyncForSymbol(this IFeed feed, ChannelWriter<Event> writer, CancellationToken token, string symbol)
+    {
+        switch (feed)
         {
-            _logger.LogWarning("Primary feed returned 404. Falling back to Yahoo Finance.");
-            await _yahooFinanceFeed.PlayAsync(channel, ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected failure in EOD feed. Falling back to Yahoo.");
-            await _yahooFinanceFeed.PlayAsync(channel, ct);
+            case EodHistoricalDataFeed eod:
+                await eod.PlayOneAsync(writer, token, symbol);
+                break;
+
+            case YahooFinanceFeed yahoo:
+                await yahoo.PlayOneAsync(writer, token, symbol);
+                break;
+
+            default:
+                throw new NotSupportedException($"Feed {feed.GetType().Name} does not support per-symbol fallback");
         }
     }
 }

@@ -1,5 +1,6 @@
-﻿using System.Net.Http.Json;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
+using System.Net;
+using System.Net.Http.Json;
 
 namespace DotQuant.Core.Services;
 
@@ -37,11 +38,19 @@ public class RateLimitedHttpClient
             if ((int)response.StatusCode == 429)
             {
                 _logger.LogWarning("429 Too Many Requests on {Key}. Retrying...", key);
-                await Task.Delay(1000 * (attempt + 1), ct); // exponential backoff
+                await Task.Delay(1000 * (attempt + 1), ct);
                 continue;
             }
 
-            _logger.LogError("Request to {Url} failed: {Code}", url, response.StatusCode);
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                _logger.LogInformation("Request to {Url} returned 404 Not Found (expected in demo mode)", url);
+            }
+            else
+            {
+                _logger.LogError("Request to {Url} failed: {Code}", url, response.StatusCode);
+            }
+
             break;
         }
 

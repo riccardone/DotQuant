@@ -11,7 +11,6 @@ using DotQuant.Feeds.AlphaVantage;
 using DotQuant.Feeds.AlphaVantage.AlphaVantage;
 using DotQuant.Feeds.Csv;
 using DotQuant.Feeds.EodHistoricalData;
-using DotQuant.Feeds.LiveFeedWithFallBack;
 using DotQuant.Feeds.YahooFinance;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -223,7 +222,6 @@ internal class Program
                 services.AddSingleton<IFeedFactory, AlphaVantageFeedFactory>();
                 services.AddSingleton<IFeedFactory, YahooFinanceFeedFactory>();
                 services.AddSingleton<IFeedFactory, EodHistoricalDataFeedFactory>();
-                services.AddSingleton<IFeedFactory, FallbackFeedFactory>();
 
                 services.Configure<YahooFinanceOptions>(configuration.GetSection("YahooFinance"));
 

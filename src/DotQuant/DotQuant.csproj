@@ -21,7 +21,6 @@
     <ProjectReference Include="..\DotQuant.Feeds.AlphaVantage\DotQuant.Feeds.AlphaVantage.csproj" />
     <ProjectReference Include="..\DotQuant.Feeds.Csv\DotQuant.Feeds.Csv.csproj" />
     <ProjectReference Include="..\DotQuant.Feeds.EodHistoricalData\DotQuant.Feeds.EodHistoricalData.csproj" />
-    <ProjectReference Include="..\DotQuant.Feeds.LiveFeedWithFallBack\DotQuant.Feeds.LiveFeedWithFallBack.csproj" />
     <ProjectReference Include="..\DotQuant.Feeds.YahooFinance\DotQuant.Feeds.YahooFinance.csproj" />
   </ItemGroup>
 

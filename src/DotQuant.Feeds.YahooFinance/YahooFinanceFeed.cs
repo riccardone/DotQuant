@@ -118,7 +118,10 @@ public class YahooFinanceFeed : LiveFeed
         }
         finally
         {
-            channel.TryComplete();
+            if (!_isLiveMode)
+            {
+                channel.TryComplete(); // Only complete for backtest mode
+            }
         }
     }
 }

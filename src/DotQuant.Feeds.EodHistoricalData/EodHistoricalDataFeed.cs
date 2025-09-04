@@ -1,10 +1,11 @@
-﻿using System.Text.Json;
+﻿using DotQuant.Core.Common;
+using DotQuant.Core.Feeds;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
-using DotQuant.Core.Common;
-using DotQuant.Core.Feeds;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
 
 namespace DotQuant.Feeds.EodHistoricalData;
 
@@ -16,8 +17,11 @@ public class EodHistoricalDataFeed : IFeed
     private readonly string[] _symbols;
     private readonly string _apiKey;
     private readonly TimeSpan _interval;
+    private readonly IEnumerable<IFeed> _fallbackFeeds;
+    private readonly ConcurrentDictionary<string, bool> _fallbackLaunched = new();
 
-    public EodHistoricalDataFeed(ILogger logger, IHttpClientFactory httpFactory, IConfiguration config, string apiKey, string[] symbols, TimeSpan? interval = null)
+    public EodHistoricalDataFeed(ILogger logger, IHttpClientFactory httpFactory, IConfiguration config, string apiKey,
+        string[] symbols, TimeSpan? interval = null, IEnumerable<IFeed>? fallbackFeeds = null)
     {
         _logger = logger;
         _httpFactory = httpFactory;
@@ -25,6 +29,7 @@ public class EodHistoricalDataFeed : IFeed
         _apiKey = apiKey;
         _symbols = symbols;
         _interval = interval ?? TimeSpan.FromSeconds(30);
+        _fallbackFeeds = fallbackFeeds ?? [];
     }
 
     public async Task PlayAsync(ChannelWriter<Event> writer, CancellationToken cancellationToken)
@@ -82,7 +87,39 @@ public class EodHistoricalDataFeed : IFeed
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to fetch intraday price for {symbol}", symbol);
+                    _logger.LogWarning(ex, "Primary EOD feed failed for {symbol}", symbol);
+
+                    if (_fallbackLaunched.ContainsKey(symbol))
+                    {
+                        _logger.LogInformation("Fallback for {symbol} already launched.", symbol);
+                        continue;
+                    }
+
+                    bool fallbackStarted = false;
+
+                    foreach (var fallback in _fallbackFeeds)
+                    {
+                        try
+                        {
+                            _logger.LogInformation("Launching fallback feed for {symbol} via {feed}", symbol, fallback.GetType().Name);
+
+                            // Important: Run fallback feed as background task
+                            _ = Task.Run(() => fallback.PlayAsync(writer, cancellationToken), cancellationToken);
+
+                            _fallbackLaunched.TryAdd(symbol, true);
+                            fallbackStarted = true;
+                            break;
+                        }
+                        catch (Exception fbEx)
+                        {
+                            _logger.LogWarning(fbEx, "Failed to launch fallback {feed} for {symbol}", fallback.GetType().Name, symbol);
+                        }
+                    }
+
+                    if (!fallbackStarted)
+                    {
+                        _logger.LogError("All fallback feeds failed for {symbol}", symbol);
+                    }
                 }
             }
 

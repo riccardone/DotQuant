@@ -29,7 +29,7 @@ public class YahooFinanceFeedFactory : IFeedFactory
 
         var live = args.TryGetValue("live", out var liveStr) && bool.TryParse(liveStr, out var isLive) && isLive;
 
-        var dataReader = new YahooFinanceDataReader();
+        var dataReader = new YahooFinanceDataReader(sp.GetRequiredService<ILogger<YahooFinanceDataReader>>());
         var feedLogger = sp.GetRequiredService<ILogger<YahooFinanceFeed>>();
         var marketStatus = sp.GetRequiredService<IMarketStatusService>();
 

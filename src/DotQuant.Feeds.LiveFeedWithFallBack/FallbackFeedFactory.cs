@@ -1,6 +1,4 @@
 ﻿using DotQuant.Core.Feeds;
-using DotQuant.Feeds.EodHistoricalData;
-using DotQuant.Feeds.YahooFinance;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -14,17 +12,22 @@ public class FallbackFeedFactory : IFeedFactory
 
     public IFeed Create(IServiceProvider sp, IConfiguration config, ILogger logger, IDictionary<string, string?> args)
     {
-        var yahooFactory = sp.GetRequiredService<YahooFinanceFeedFactory>();
-        var eodFactory = sp.GetRequiredService<EodHistoricalDataFeedFactory>();
-        var fallbackLogger = sp.GetRequiredService<ILogger<FallbackFeed>>();
+        var symbolCsv = args.GetValueOrDefault("--tickers") ?? throw new ArgumentException("Missing --tickers");
+        var intervalStr = args.GetValueOrDefault("--interval") ?? "00:01:00";
+        var interval = TimeSpan.Parse(intervalStr);
 
-        var settings = args is Dictionary<string, string?> dict
-            ? dict
-            : args.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        var symbols = symbolCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+        var fallbackLogger = loggerFactory.CreateLogger<FallbackFeed>();
+        var feedMap = new Dictionary<string, (IEodSymbolFeed Eod, IYahooSymbolFeed Yahoo)>();
 
-        var yahooFeed = yahooFactory.Create(sp, config, logger, settings);
-        var eodFeed = eodFactory.Create(sp, config, logger, settings);
+        foreach (var symbol in symbols)
+        {
+            var eod = new EodHistoricalDataFeedSingle(symbol, config, sp.GetRequiredService<IHttpClientFactory>(), fallbackLogger, interval);
+            var yahoo = new YahooFinanceFeedSingle(symbol, config, sp.GetRequiredService<IHttpClientFactory>(), fallbackLogger, interval);
+            feedMap[symbol] = (eod, yahoo);
+        }
 
-        return new FallbackFeed((YahooFinanceFeed)yahooFeed, (EodHistoricalDataFeed)eodFeed, fallbackLogger);
+        return new FallbackFeed(feedMap, fallbackLogger, interval);
     }
 }

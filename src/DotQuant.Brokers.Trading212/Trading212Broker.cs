@@ -46,7 +46,14 @@ public class Trading212Broker : IBroker
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error syncing positions on event");
+            if (ex is HttpRequestException httpEx && httpEx.Message.Contains("404"))
+            {
+                _logger.LogInformation("Positions endpoint not available in demo mode.");
+            }
+            else
+            {
+                _logger.LogError(ex, "Error syncing positions on event");
+            }
         }
 
         return _account;
