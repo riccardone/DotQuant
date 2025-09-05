@@ -1,3 +1,4 @@
+
 ﻿using DotQuant.Core.Feeds;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,7 +20,12 @@ public class EodHistoricalDataFeedFactory : IFeedFactory
             throw new ArgumentException("Missing --tickers argument");
 
         var tickers = tickersArg.Split(',');
-        var intervalSeconds = int.TryParse(config["EOD:PollingIntervalSeconds"], out var s) ? s : 30;
+
+        TimeSpan interval = TimeSpan.FromSeconds(30);
+        if (args.TryGetValue("--interval", out var intervalArg) && TimeSpan.TryParse(intervalArg, out var parsedInterval))
+        {
+            interval = parsedInterval;
+        }
 
         // 🔁 Check for fallback feed key
         var fallbackFeeds = new List<IFeed>();
@@ -41,7 +47,7 @@ public class EodHistoricalDataFeedFactory : IFeedFactory
             config,
             apiKey,
             tickers,
-            TimeSpan.FromSeconds(intervalSeconds),
+            interval,
             fallbackFeeds);
     }
 }
