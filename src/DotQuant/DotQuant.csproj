@@ -18,7 +18,6 @@
   <ItemGroup>
     <ProjectReference Include="..\DotQuant.Brokers.Trading212\DotQuant.Brokers.Trading212.csproj" />
     <ProjectReference Include="..\DotQuant.Core\DotQuant.Core.csproj" />
-    <ProjectReference Include="..\DotQuant.Feeds.AlphaVantage\DotQuant.Feeds.AlphaVantage.csproj" />
     <ProjectReference Include="..\DotQuant.Feeds.Csv\DotQuant.Feeds.Csv.csproj" />
     <ProjectReference Include="..\DotQuant.Feeds.EodHistoricalData\DotQuant.Feeds.EodHistoricalData.csproj" />
     <ProjectReference Include="..\DotQuant.Feeds.YahooFinance\DotQuant.Feeds.YahooFinance.csproj" />

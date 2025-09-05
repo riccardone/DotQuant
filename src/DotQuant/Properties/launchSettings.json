@@ -2,7 +2,7 @@
   "profiles": {
     "DotQuant": {
       "commandName": "Project",
-      "commandLineArgs": "--feed eod --fallback yahoo --broker trading212 --tickers ENI.MI --live --interval 00:01:00"
+      "commandLineArgs": "--feed eod --fallback yahoo --broker trading212 --tickers ENI.MI --live --interval 00:00:10"
     },
     "Container (Dockerfile)": {
       "commandName": "Docker"

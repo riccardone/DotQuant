@@ -9,8 +9,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Core", "DotQuant.C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Brokers.Trading212", "DotQuant.Brokers.Trading212\DotQuant.Brokers.Trading212.csproj", "{2A67F406-1A9C-4A91-B690-3881F6B2B21B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Feeds.AlphaVantage", "DotQuant.Feeds.AlphaVantage\DotQuant.Feeds.AlphaVantage.csproj", "{7475178D-DC30-4F10-AB27-9F48539FB5DF}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Feeds.Csv", "DotQuant.Feeds.Csv\DotQuant.Feeds.Csv.csproj", "{9C1EF296-D79B-40CC-AE77-5A564136CD8C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Feeds.YahooFinance", "DotQuant.Feeds.YahooFinance\DotQuant.Feeds.YahooFinance.csproj", "{88E15707-D6DE-4C9E-99AB-777184FAC753}"
@@ -35,10 +33,6 @@ Global
 		{2A67F406-1A9C-4A91-B690-3881F6B2B21B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2A67F406-1A9C-4A91-B690-3881F6B2B21B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2A67F406-1A9C-4A91-B690-3881F6B2B21B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7475178D-DC30-4F10-AB27-9F48539FB5DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7475178D-DC30-4F10-AB27-9F48539FB5DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7475178D-DC30-4F10-AB27-9F48539FB5DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7475178D-DC30-4F10-AB27-9F48539FB5DF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{9C1EF296-D79B-40CC-AE77-5A564136CD8C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9C1EF296-D79B-40CC-AE77-5A564136CD8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9C1EF296-D79B-40CC-AE77-5A564136CD8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
