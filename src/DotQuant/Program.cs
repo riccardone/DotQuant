@@ -7,8 +7,6 @@ using DotQuant.Core.Common;
 using DotQuant.Core.Feeds;
 using DotQuant.Core.Services;
 using DotQuant.Core.Strategies;
-using DotQuant.Feeds.AlphaVantage;
-using DotQuant.Feeds.AlphaVantage.AlphaVantage;
 using DotQuant.Feeds.Csv;
 using DotQuant.Feeds.EodHistoricalData;
 using DotQuant.Feeds.YahooFinance;
@@ -198,28 +196,16 @@ internal class Program
 
                 services.AddHttpClient();
 
-                var apiKey = configuration["AlphaVantage:ApiKey"];
-                if (!string.IsNullOrWhiteSpace(apiKey))
-                {
-                    services.AddHttpClient("AlphaVantage", client =>
-                    {
-                        client.BaseAddress = new Uri("https://www.alphavantage.co");
-                    }).AddHttpMessageHandler(() => new AlphaVantageAuthHandler(apiKey));
-                }
-
                 services.AddHttpClient<IMarketStatusService, MarketStatusService>();
 
                 services.AddSingleton<Worker>();
                 services.AddSingleton<IPriceVolumeProvider, FakePriceVolumeProvider>();
-                services.AddSingleton<DataFetcher>();
-                services.AddSingleton<IDataReader, AlphaVantageDataReader>();
 
                 services.AddSingleton<IStrategy, EmaCrossover>();
                 services.AddSingleton<IBrokerFactory, Trading212BrokerFactory>();
                 services.AddSingleton<IBrokerFactory, SimBrokerFactory>();
                 services.AddSingleton<IBrokerFactoryRegistry, BrokerFactoryRegistry>();
                 services.AddSingleton<IFeedFactory, CsvFeedFactory>();
-                services.AddSingleton<IFeedFactory, AlphaVantageFeedFactory>();
                 services.AddSingleton<IFeedFactory, YahooFinanceFeedFactory>();
                 services.AddSingleton<IFeedFactory, EodHistoricalDataFeedFactory>();
 
