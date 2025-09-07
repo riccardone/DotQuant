@@ -1,41 +1,52 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.8" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.8" />
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
-  </ItemGroup>
+	<ItemGroup>
+		<!-- Base Hosting and Logging -->
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="9.0.8" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.8" />
 
-  <ItemGroup>
-    <ProjectReference Include="..\DotQuant.Brokers.Trading212\DotQuant.Brokers.Trading212.csproj" />
-    <ProjectReference Include="..\DotQuant.Core\DotQuant.Core.csproj" />
-    <ProjectReference Include="..\DotQuant.Feeds.Csv\DotQuant.Feeds.Csv.csproj" />
-    <ProjectReference Include="..\DotQuant.Feeds.EodHistoricalData\DotQuant.Feeds.EodHistoricalData.csproj" />
-    <ProjectReference Include="..\DotQuant.Feeds.YahooFinance\DotQuant.Feeds.YahooFinance.csproj" />
-  </ItemGroup>
+		<!-- Web API / ASP.NET Core Support -->
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.2.5" />
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="9.0.0" />
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
 
-  <ItemGroup>
-    <None Update="appsettings.dev.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="data\IT\Eni.csv">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="plugins\readme.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+		<!-- Version conflict resolution -->
+		<PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="9.0.8" />
+
+		<!-- Optional container tools -->
+		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\DotQuant.Brokers.Trading212\DotQuant.Brokers.Trading212.csproj" />
+		<ProjectReference Include="..\DotQuant.Core\DotQuant.Core.csproj" />
+		<ProjectReference Include="..\DotQuant.Feeds.Csv\DotQuant.Feeds.Csv.csproj" />
+		<ProjectReference Include="..\DotQuant.Feeds.EodHistoricalData\DotQuant.Feeds.EodHistoricalData.csproj" />
+		<ProjectReference Include="..\DotQuant.Feeds.YahooFinance\DotQuant.Feeds.YahooFinance.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="appsettings.dev.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="appsettings.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="data\IT\Eni.csv">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="plugins\readme.txt">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 
 </Project>

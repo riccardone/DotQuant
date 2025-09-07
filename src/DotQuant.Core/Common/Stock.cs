@@ -1,4 +1,4 @@
-﻿using DotQuant.Core.Common;
+﻿namespace DotQuant.Core.Common;
 
 public sealed record Stock(Symbol symbol, Currency currency) : AssetBase(symbol.ToString(), currency)
 {

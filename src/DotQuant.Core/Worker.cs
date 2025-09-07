@@ -1,67 +1,52 @@
-﻿using DotQuant.Core.Brokers;
+﻿using System.Globalization;
+using System.Text;
+using DotQuant.Core.Brokers;
 using DotQuant.Core.Common;
 using DotQuant.Core.Feeds;
 using DotQuant.Core.Journals;
+using DotQuant.Core.Services;
+using DotQuant.Core.Services.GraphModels;
 using DotQuant.Core.Strategies;
 using DotQuant.Core.Traders;
 using Microsoft.Extensions.Logging;
-using System.Globalization;
-using System.Text;
 
 namespace DotQuant.Core;
 
 public class Worker
 {
-    public static IAccount Run(
-        ILoggerFactory loggerFactory,
+    private readonly ILogger<Worker> _logger;
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly InMemorySessionGraphProvider _sessionGraph;
+
+    public Worker(ILoggerFactory loggerFactory, ISessionGraphProvider sessionGraph)
+    {
+        _loggerFactory = loggerFactory;
+        _logger = loggerFactory.CreateLogger<Worker>();
+        _sessionGraph = sessionGraph as InMemorySessionGraphProvider
+                        ?? throw new ArgumentException("Worker requires InMemorySessionGraphProvider");
+    }
+
+    public async Task<IAccount> RunAsync(
         IFeed feed,
         IStrategy strategy,
-        IBroker broker, // Required now
+        IBroker broker,
         Journal? journal = null,
         Trader? trader = null,
         Timeframe? timeframe = null,
         EventChannel? eventChannel = null,
         int timeoutMillis = -1,
-        bool showProgressBar = false)
-    {
-        var logger = loggerFactory.CreateLogger<Worker>();
-
-        trader ??= new FlexTrader(logger: loggerFactory.CreateLogger<FlexTrader>());
-        timeframe ??= Timeframe.Infinite;
-        eventChannel ??= new EventChannel(timeframe);
-        journal ??= new BasicJournal(loggerFactory.CreateLogger<BasicJournal>(), logProgress: true);
-
-        using var cts = new CancellationTokenSource();
-
-        Console.CancelKeyPress += (_, e) =>
-        {
-            e.Cancel = true;
-            logger.LogWarning("Cancellation requested via Ctrl+C.");
-            cts.Cancel();
-        };
-
-        return RunAsync(feed, strategy, journal, trader, timeframe, broker, eventChannel,
-                        timeoutMillis, showProgressBar, logger, cts.Token)
-            .GetAwaiter().GetResult();
-    }
-
-    private static async Task<IAccount> RunAsync(
-        IFeed feed,
-        IStrategy strategy,
-        Journal journal,
-        Trader trader,
-        Timeframe timeframe,
-        IBroker broker,
-        EventChannel eventChannel,
-        int timeoutMillis,
-        bool showProgressBar,
-        ILogger<Worker> logger,
+        bool showProgressBar = false,
         CancellationToken cancellationToken = default)
     {
+        trader ??= new FlexTrader(logger: _loggerFactory.CreateLogger<FlexTrader>());
+        timeframe ??= Timeframe.Infinite;
+        eventChannel ??= new EventChannel(timeframe);
+        journal ??= new BasicJournal(_loggerFactory.CreateLogger<BasicJournal>(), logProgress: true);
+
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var token = linkedCts.Token;
 
-        logger.LogInformation("Starting trading session...");
+        _logger.LogInformation("Starting trading session...");
 
         var feedTask = feed.PlayBackgroundAsync(eventChannel, token);
         ProgressBar? progressBar = null;
@@ -81,7 +66,7 @@ public class Worker
                 {
                     while (eventChannel.Reader.TryRead(out var evt))
                     {
-                        if (evt == null) continue;
+                        if (evt == null || evt.IsEmpty()) continue;
 
                         progressBar?.Update(evt.Time);
 
@@ -89,23 +74,56 @@ public class Worker
 
                         foreach (var priceItem in evt.Prices)
                         {
-                            logger.LogInformation("Tick: {Symbol} @ {Price} (Time: {Time})",
-                                priceItem.Value.Asset.Symbol,
-                                priceItem.Value.Close,
+                            var price = priceItem.Value;
+                            _logger.LogInformation("Tick: {Symbol} OHLC: {Open}/{High}/{Low}/{Close} (Time: {Time})",
+                                price.Asset.Symbol, price.Open, price.High, price.Low, price.Close,
                                 evt.Time.UtcDateTime.ToString("HH:mm:ss"));
+
+                            _sessionGraph.AddPrice(new PricePoint(
+                                Ticker: priceItem.Key.Symbol,
+                                Time: evt.Time.DateTime,
+                                Open: price.Open,
+                                High: price.High,
+                                Low: price.Low,
+                                Close: price.Close
+                            ));
                         }
 
                         if (signals.Any())
                         {
                             var summary = string.Join(", ", signals.Select(s =>
                                 $"{s.Asset.Symbol} {s.Type}({s.Intent}) Dir={s.Rating:+0.0;-0.0;0}"));
-                            logger.LogInformation("Signals at {time} [{count}]: {summary}",
-                                evt.Time.Date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture), signals.Count, summary);
+
+                            _logger.LogInformation("Signals at {time} [{count}]: {summary}",
+                                evt.Time.Date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture),
+                                signals.Count, summary);
+
+                            foreach (var signal in signals)
+                            {
+                                _sessionGraph.AddSignal(new SignalPoint(
+                                    Ticker: signal.Asset.Symbol,
+                                    Time: evt.Time.DateTime,
+                                    Type: signal.Type.ToString(),
+                                    Confidence: (int)Math.Abs(signal.Rating)
+                                ));
+                            }
                         }
 
                         var preTradeAccount = broker.Sync();
                         var orders = trader.CreateOrders(signals, preTradeAccount, evt);
+
                         broker.PlaceOrders(orders);
+
+                        foreach (var order in orders)
+                        {
+                            _sessionGraph.AddOrder(new OrderPoint(
+                                Ticker: order.Asset.Symbol, 
+                                Time: evt.Time.DateTime,
+                                Side: order.Buy ? "Buy" : order.Sell ? "Sell" : "Hold",
+                                Price: order.Limit,
+                                Quantity: order.Size.Quantity
+                            ));
+                        }
 
                         var postTradeAccount = broker.Sync(evt);
                         journal.Track(evt, postTradeAccount, signals, orders);
@@ -115,11 +133,11 @@ public class Worker
         }
         catch (OperationCanceledException)
         {
-            logger.LogWarning("Trading session cancelled.");
+            _logger.LogWarning("Trading session cancelled.");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unexpected error during session.");
+            _logger.LogError(ex, "Unexpected error during session.");
         }
         finally
         {
@@ -127,7 +145,7 @@ public class Worker
                 linkedCts.Cancel();
 
             progressBar?.Stop();
-            logger.LogInformation("Session complete. Finalizing...");
+            _logger.LogInformation("Session complete. Finalizing...");
         }
 
         return broker.Sync();

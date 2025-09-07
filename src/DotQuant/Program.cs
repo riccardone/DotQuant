@@ -10,6 +10,7 @@ using DotQuant.Core.Strategies;
 using DotQuant.Feeds.Csv;
 using DotQuant.Feeds.EodHistoricalData;
 using DotQuant.Feeds.YahooFinance;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -19,23 +20,37 @@ namespace DotQuant;
 
 internal class Program
 {
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.CurrentCulture;
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentCulture;
 
-        using var host = CreateHostBuilder(args).Build();
+        var appHost = CreateHostBuilder(args).Build();
 
-        var logger = host.Services.GetRequiredService<ILogger<Program>>();
+        var apiHost = Host.CreateDefaultBuilder(args)
+            .ConfigureWebHostDefaults(webBuilder =>
+            {
+                var apiPort = Environment.GetEnvironmentVariable("DOTQUANT_API_PORT") ?? "5000";
+                webBuilder.UseUrls($"http://localhost:{apiPort}");
+                webBuilder.UseStartup<Startup>();
+            })
+            .ConfigureServices(services =>
+            {
+                services.AddSingleton(appHost.Services.GetRequiredService<ISessionGraphProvider>());
+            })
+            .Build();
 
+        await apiHost.StartAsync();
+
+        var logger = appHost.Services.GetRequiredService<ILogger<Program>>();
         logger.LogInformation("Starting DotQuant session...");
 
-        var config = host.Services.GetRequiredService<IConfiguration>();
-        var loggerFactory = host.Services.GetRequiredService<ILoggerFactory>();
+        var config = appHost.Services.GetRequiredService<IConfiguration>();
+        var loggerFactory = appHost.Services.GetRequiredService<ILoggerFactory>();
 
         if (args.Contains("--list-brokers", StringComparer.OrdinalIgnoreCase))
         {
-            var registry = host.Services.GetRequiredService<IBrokerFactoryRegistry>();
+            var registry = appHost.Services.GetRequiredService<IBrokerFactoryRegistry>();
             logger.LogInformation("Available brokers:");
             foreach (var factory in registry.All)
                 logger.LogInformation($"- {factory.Key}: {factory.DisplayName} — {factory.Description}");
@@ -49,10 +64,10 @@ internal class Program
 
         logger.LogInformation("Feed selected: {Feed}", feedType);
 
-        var strategies = host.Services.GetServices<IStrategy>().ToList();
+        var strategies = appHost.Services.GetServices<IStrategy>().ToList();
         var strategy = SelectPlugin(strategies, strategyName, logger);
 
-        var brokerRegistry = host.Services.GetRequiredService<IBrokerFactoryRegistry>();
+        var brokerRegistry = appHost.Services.GetRequiredService<IBrokerFactoryRegistry>();
         var brokerFactory = !string.IsNullOrWhiteSpace(brokerName)
             ? brokerRegistry.Get(brokerName)
             : brokerRegistry.All.FirstOrDefault(a => a.Key.Equals("sim", StringComparison.OrdinalIgnoreCase));
@@ -63,22 +78,26 @@ internal class Program
         logger.LogInformation("Broker selected: {Broker}", brokerFactory.Key);
 
         var brokerLogger = loggerFactory.CreateLogger<IBroker>();
-        var broker = brokerFactory.Create(host.Services, config, brokerLogger);
+        var broker = brokerFactory.Create(appHost.Services, config, brokerLogger);
 
-        var feedFactories = host.Services.GetServices<IFeedFactory>().ToList();
+        var feedFactories = appHost.Services.GetServices<IFeedFactory>().ToList();
         var feedFactory = feedFactories.FirstOrDefault(f =>
                               string.Equals(f.Key, feedType, StringComparison.OrdinalIgnoreCase))
                           ?? throw new ArgumentException($"Invalid feed type: {feedType}. Available: {string.Join(", ", feedFactories.Select(f => f.Key))}");
 
-        var feed = feedFactory.Create(host.Services, config, logger, argsMap);
+        var feed = feedFactory.Create(appHost.Services, config, logger, argsMap);
 
         var startingCash = broker.Sync().CashAmount;
-        var account = Worker.Run(loggerFactory, feed, strategy, broker);
-
+        var account = await appHost.Services.GetRequiredService<Worker>().RunAsync(feed, strategy, broker);
+        
         PrintAccountSummary(logger, account, startingCash);
 
         logger.LogInformation("Press Enter to exit...");
-        Console.ReadLine();
+        var consoleExit = Task.Run(() => Console.ReadLine());
+        await Task.WhenAny(consoleExit);
+
+        logger.LogInformation("Shutting down...");
+        await apiHost.StopAsync(TimeSpan.FromSeconds(3));
     }
 
     private static Dictionary<string, string?> BuildArgsMap(string[] args)
@@ -92,14 +111,9 @@ internal class Program
             {
                 var key = arg;
                 if (i + 1 >= args.Length || args[i + 1].StartsWith("--"))
-                {
                     map[key] = "true";
-                }
                 else
-                {
-                    map[key] = args[i + 1];
-                    i++;
-                }
+                    map[key] = args[++i];
             }
         }
 
@@ -195,7 +209,6 @@ internal class Program
                 var configuration = ctx.Configuration;
 
                 services.AddHttpClient();
-
                 services.AddHttpClient<IMarketStatusService, MarketStatusService>();
 
                 services.AddSingleton<Worker>();
@@ -209,6 +222,7 @@ internal class Program
                 services.AddSingleton<IFeedFactory, YahooFinanceFeedFactory>();
                 services.AddSingleton<IFeedFactory, EodHistoricalDataFeedFactory>();
 
+                services.AddSingleton<ISessionGraphProvider, InMemorySessionGraphProvider>();
                 services.Configure<YahooFinanceOptions>(configuration.GetSection("YahooFinance"));
 
                 RegisterDynamicPlugins(services);
