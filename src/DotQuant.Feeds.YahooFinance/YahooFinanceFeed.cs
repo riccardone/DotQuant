@@ -23,7 +23,6 @@ public class YahooFinanceFeed : LiveFeed
     private readonly bool _isLiveMode;
     private readonly TimeSpan _pollingInterval;
     private readonly TimeSpan _timeSpan;
-    private readonly IMarketStatusService _marketStatusService;
 
     public YahooFinanceFeed(
         IDataReader dataReader,
@@ -41,11 +40,13 @@ public class YahooFinanceFeed : LiveFeed
         _symbols = symbols ?? throw new ArgumentNullException(nameof(symbols));
         _start = start;
         _end = end;
-        _marketStatusService = marketStatusService ?? throw new ArgumentNullException(nameof(marketStatusService));
         _isLiveMode = isLiveMode;
         _pollingInterval = pollingInterval ?? TimeSpan.FromSeconds(10);
         _timeSpan = _pollingInterval;
         _config = config ?? throw new ArgumentNullException(nameof(config));
+
+        // Set up market check logic from base class
+        EnableMarketStatus(marketStatusService, logger);
     }
 
     public override async Task PlayAsync(ChannelWriter<Event> channel, CancellationToken ct = default)
@@ -58,9 +59,8 @@ public class YahooFinanceFeed : LiveFeed
                 {
                     foreach (var symbol in _symbols)
                     {
-                        if (!await _marketStatusService.IsMarketOpenAsync(symbol, ct))
+                        if (!await IsMarketOpenAsync(symbol, ct))
                         {
-                            _logger.LogInformation("Market for {Symbol} is closed. Skipping tick.", symbol);
                             continue;
                         }
 

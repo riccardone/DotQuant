@@ -10,9 +10,9 @@ using System.Threading.Channels;
 
 namespace DotQuant.Feeds.EodHistoricalData;
 
-public class EodHistoricalDataFeed : IFeed
+public class EodHistoricalDataFeed : LiveFeed
 {
-    private readonly ILogger _logger;
+    private readonly ILogger<EodHistoricalDataFeed> _logger;
     private readonly IHttpClientFactory _httpFactory;
     private readonly IConfiguration _config;
     private readonly string[] _symbols;
@@ -25,58 +25,73 @@ public class EodHistoricalDataFeed : IFeed
     private readonly ConcurrentDictionary<string, bool> _fallbackLaunched = new();
 
     public EodHistoricalDataFeed(
-        ILogger logger,
+        ILogger<EodHistoricalDataFeed> logger,
         IHttpClientFactory httpFactory,
         IConfiguration config,
         string apiKey,
         string[] symbols,
+        IMarketStatusService marketStatusService,
         TimeSpan? interval = null,
         IEnumerable<IFeed>? fallbackFeeds = null,
         DateTime? start = null,
         DateTime? end = null,
         bool isLive = true)
     {
-        _logger = logger;
-        _httpFactory = httpFactory;
-        _config = config;
-        _apiKey = apiKey;
-        _symbols = symbols;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _httpFactory = httpFactory ?? throw new ArgumentNullException(nameof(httpFactory));
+        _config = config ?? throw new ArgumentNullException(nameof(config));
+        _apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
+        _symbols = symbols ?? throw new ArgumentNullException(nameof(symbols));
         _interval = interval ?? TimeSpan.FromSeconds(30);
         _fallbackFeeds = fallbackFeeds ?? [];
         _start = start ?? DateTime.UtcNow;
         _end = end ?? DateTime.UtcNow;
         _isLive = isLive;
+
+        EnableMarketStatus(marketStatusService, logger);
     }
 
-    public async Task PlayAsync(ChannelWriter<Event> writer, CancellationToken cancellationToken)
+    public override async Task PlayAsync(ChannelWriter<Event> channel, CancellationToken cancellationToken)
     {
         var client = _httpFactory.CreateClient();
 
         if (_isLive)
         {
-            await RunLiveMode(writer, client, cancellationToken);
+            await RunLiveMode(channel, client, cancellationToken);
         }
         else
         {
-            await RunHistoricalMode(writer, client, cancellationToken);
-            writer.TryComplete(); // Close writer after backtest
+            await RunHistoricalMode(channel, client, cancellationToken);
+            channel.TryComplete(); // Close writer after backtest
         }
     }
 
-    private async Task RunLiveMode(ChannelWriter<Event> writer, HttpClient client, CancellationToken cancellationToken)
+    private async Task RunLiveMode(ChannelWriter<Event> channel, HttpClient client, CancellationToken ct)
     {
-        while (!cancellationToken.IsCancellationRequested)
+        while (!ct.IsCancellationRequested)
         {
             foreach (var symbolStr in _symbols)
             {
                 try
                 {
+                    var parts = symbolStr.Split('.');
+                    if (parts.Length != 2)
+                    {
+                        _logger.LogWarning("Invalid symbol format: {Symbol}", symbolStr);
+                        continue;
+                    }
+
+                    var symbol = new Symbol(parts[0], parts[1]);
+                    if (!await IsMarketOpenAsync(symbol, ct))
+                        continue;
+
                     var adjustedSymbol = MapSymbol(symbolStr);
                     var url = $"https://eodhistoricaldata.com/api/intraday/{adjustedSymbol}?interval=5m&range=1d&api_token={_apiKey}&fmt=json";
-                    var response = await client.GetAsync(url, cancellationToken);
+
+                    var response = await client.GetAsync(url, ct);
                     response.EnsureSuccessStatusCode();
 
-                    var json = await response.Content.ReadAsStringAsync(cancellationToken);
+                    var json = await response.Content.ReadAsStringAsync(ct);
                     var bars = JsonSerializer.Deserialize<List<IntradayBar>>(json);
                     var latest = bars?.LastOrDefault();
 
@@ -86,33 +101,42 @@ public class EodHistoricalDataFeed : IFeed
                         continue;
                     }
 
-                    await EmitPrice(writer, symbolStr, latest, _interval, DateTime.UtcNow, cancellationToken);
+                    await EmitPrice(channel, symbol, latest, _interval, DateTime.UtcNow, ct);
                 }
                 catch (Exception ex)
                 {
-                    await HandleFallback(symbolStr, writer, cancellationToken, ex);
+                    await HandleFallback(symbolStr, channel, ct, ex);
                 }
             }
 
-            await Task.Delay(_interval, cancellationToken);
+            await Task.Delay(_interval, ct);
         }
     }
 
-    private async Task RunHistoricalMode(ChannelWriter<Event> writer, HttpClient client, CancellationToken cancellationToken)
+    private async Task RunHistoricalMode(ChannelWriter<Event> channel, HttpClient client, CancellationToken ct)
     {
         foreach (var symbolStr in _symbols)
         {
             try
             {
+                var parts = symbolStr.Split('.');
+                if (parts.Length != 2)
+                {
+                    _logger.LogWarning("Invalid symbol format: {Symbol}", symbolStr);
+                    continue;
+                }
+
+                var symbol = new Symbol(parts[0], parts[1]);
                 var adjustedSymbol = MapSymbol(symbolStr);
                 var from = _start.ToString("yyyy-MM-dd");
                 var to = _end.ToString("yyyy-MM-dd");
 
                 var url = $"https://eodhistoricaldata.com/api/eod/{adjustedSymbol}?from={from}&to={to}&api_token={_apiKey}&fmt=json";
-                var response = await client.GetAsync(url, cancellationToken);
+
+                var response = await client.GetAsync(url, ct);
                 response.EnsureSuccessStatusCode();
 
-                var json = await response.Content.ReadAsStringAsync(cancellationToken);
+                var json = await response.Content.ReadAsStringAsync(ct);
                 var bars = JsonSerializer.Deserialize<List<IntradayBar>>(json);
 
                 if (bars == null || bars.Count == 0)
@@ -123,25 +147,20 @@ public class EodHistoricalDataFeed : IFeed
 
                 foreach (var bar in bars)
                 {
-                    await EmitPrice(writer, symbolStr, bar, TimeSpan.FromDays(1), bar.Datetime, cancellationToken);
+                    await EmitPrice(channel, symbol, bar, TimeSpan.FromDays(1), bar.Datetime, ct);
                 }
 
                 _logger.LogInformation("Historical data for {Symbol} emitted: {Count} bars", symbolStr, bars.Count);
             }
             catch (Exception ex)
             {
-                await HandleFallback(symbolStr, writer, cancellationToken, ex);
+                await HandleFallback(symbolStr, channel, ct, ex);
             }
         }
     }
 
-    private async Task EmitPrice(ChannelWriter<Event> writer, string symbolStr, IntradayBar bar, TimeSpan timespan, DateTime time, CancellationToken cancellationToken)
+    private async Task EmitPrice(ChannelWriter<Event> channel, Symbol symbol, IntradayBar bar, TimeSpan timespan, DateTime time, CancellationToken ct)
     {
-        var parts = symbolStr.Split('.');
-        if (parts.Length != 2)
-            throw new FormatException($"Invalid symbol format: {symbolStr}. Expected format 'TICKER.EXCHANGE'");
-
-        var symbol = new Symbol(parts[0], parts[1]);
         var currency = _config.ResolveCurrency(symbol, _logger);
         var asset = new Stock(symbol, currency);
 
@@ -150,16 +169,16 @@ public class EodHistoricalDataFeed : IFeed
             new PriceItem(asset, bar.Open, bar.High, bar.Low, bar.Close, bar.Volume, timespan)
         });
 
-        await writer.WriteAsync(evt, cancellationToken);
+        await SendAsync(evt);
     }
 
-    private async Task HandleFallback(string symbol, ChannelWriter<Event> writer, CancellationToken cancellationToken, Exception ex)
+    private async Task HandleFallback(string symbol, ChannelWriter<Event> channel, CancellationToken ct, Exception ex)
     {
-        _logger.LogWarning(ex, "Primary EOD feed failed for {symbol}", symbol);
+        _logger.LogWarning(ex, "Primary EOD feed failed for {Symbol}", symbol);
 
         if (_fallbackLaunched.ContainsKey(symbol))
         {
-            _logger.LogInformation("Fallback already launched for {symbol}", symbol);
+            _logger.LogInformation("Fallback already launched for {Symbol}", symbol);
             return;
         }
 
@@ -167,18 +186,18 @@ public class EodHistoricalDataFeed : IFeed
         {
             try
             {
-                _logger.LogInformation("Launching fallback for {symbol} via {feed}", symbol, fallback.GetType().Name);
-                _ = Task.Run(() => fallback.PlayAsync(writer, cancellationToken), cancellationToken);
+                _logger.LogInformation("Launching fallback for {Symbol} via {Feed}", symbol, fallback.GetType().Name);
+                _ = Task.Run(() => fallback.PlayAsync(channel, ct), ct);
                 _fallbackLaunched.TryAdd(symbol, true);
                 return;
             }
             catch (Exception fbEx)
             {
-                _logger.LogWarning(fbEx, "Failed to launch fallback {feed} for {symbol}", fallback.GetType().Name, symbol);
+                _logger.LogWarning(fbEx, "Failed to launch fallback {Feed} for {Symbol}", fallback.GetType().Name, symbol);
             }
         }
 
-        _logger.LogError("All fallback feeds failed for {symbol}", symbol);
+        _logger.LogError("All fallback feeds failed for {Symbol}", symbol);
     }
 
     private static string MapSymbol(string symbol)
@@ -186,7 +205,7 @@ public class EodHistoricalDataFeed : IFeed
         return symbol
             .Replace(".NASDAQ", ".US", StringComparison.OrdinalIgnoreCase)
             .Replace(".NYSE", ".US", StringComparison.OrdinalIgnoreCase)
-            .Replace(".MTA", ".MI", StringComparison.OrdinalIgnoreCase); // correct for EOD
+            .Replace(".MTA", ".MI", StringComparison.OrdinalIgnoreCase);
     }
 
     private class IntradayBar

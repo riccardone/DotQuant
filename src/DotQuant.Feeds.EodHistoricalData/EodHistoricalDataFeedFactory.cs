@@ -1,3 +1,4 @@
+using DotQuant.Core.Common;
 using DotQuant.Core.Feeds;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -48,11 +49,12 @@ public class EodHistoricalDataFeedFactory : LiveFeedFactoryBase
         }
 
         return new EodHistoricalDataFeed(
-            logger: logger,
+            logger: sp.GetRequiredService<ILogger<EodHistoricalDataFeed>>(),
             httpFactory: sp.GetRequiredService<IHttpClientFactory>(),
             config: config,
             apiKey: apiKey,
             symbols: tickers,
+            marketStatusService: sp.GetRequiredService<IMarketStatusService>(),
             interval: interval,
             fallbackFeeds: fallbackFeeds,
             start: start,

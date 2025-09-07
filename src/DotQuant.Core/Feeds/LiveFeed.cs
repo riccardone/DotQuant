@@ -1,5 +1,6 @@
-﻿using System.Threading.Channels;
-using DotQuant.Core.Common;
+﻿using DotQuant.Core.Common;
+using Microsoft.Extensions.Logging;
+using System.Threading.Channels;
 
 namespace DotQuant.Core.Feeds;
 
@@ -11,6 +12,36 @@ public abstract class LiveFeed : IFeed
 {
     private readonly List<ChannelWriter<Event>> _channels = new();
     private readonly object _lock = new();
+    private IMarketStatusService? _marketStatusService;
+    private ILogger? _logger;
+
+    /// <summary>
+    /// Enables per-symbol market status checking for derived live feeds.
+    /// Should be called during feed construction.
+    /// </summary>
+    protected void EnableMarketStatus(IMarketStatusService marketStatusService, ILogger logger)
+    {
+        _marketStatusService = marketStatusService;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Checks if the market for the given symbol is currently open.
+    /// Returns false if market status service is not configured.
+    /// </summary>
+    protected async Task<bool> IsMarketOpenAsync(Symbol symbol, CancellationToken ct)
+    {
+        if (_marketStatusService == null)
+            return true; // allow by default
+
+        var isOpen = await _marketStatusService.IsMarketOpenAsync(symbol, ct);
+        if (!isOpen)
+        {
+            _logger?.LogInformation("Market is closed for {Symbol}, skipping tick.", symbol);
+        }
+
+        return isOpen;
+    }
 
     /// <summary>
     /// Returns true if the live feed is active (has any channels).
