@@ -1,6 +1,7 @@
 ﻿using DotQuant.Core.Common;
 using DotQuant.Core.Extensions;
 using DotQuant.Core.Feeds;
+using DotQuant.Core.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
@@ -23,6 +24,7 @@ public class EodHistoricalDataFeed : LiveFeed
     private readonly DateTime _end;
     private readonly bool _isLive;
     private readonly ConcurrentDictionary<string, bool> _fallbackLaunched = new();
+    private JsonSerializerOptions _options;
 
     public EodHistoricalDataFeed(
         ILogger<EodHistoricalDataFeed> logger,
@@ -47,6 +49,12 @@ public class EodHistoricalDataFeed : LiveFeed
         _start = start ?? DateTime.UtcNow;
         _end = end ?? DateTime.UtcNow;
         _isLive = isLive;
+
+        _options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+        _options.Converters.Add(new SafeDateTimeConverter());
 
         EnableMarketStatus(marketStatusService, logger);
     }
@@ -92,7 +100,7 @@ public class EodHistoricalDataFeed : LiveFeed
                     response.EnsureSuccessStatusCode();
 
                     var json = await response.Content.ReadAsStringAsync(ct);
-                    var bars = JsonSerializer.Deserialize<List<IntradayBar>>(json);
+                    var bars = JsonSerializer.Deserialize<List<IntradayBar>>(json, _options);
                     var latest = bars?.LastOrDefault();
 
                     if (latest == null)
@@ -137,7 +145,7 @@ public class EodHistoricalDataFeed : LiveFeed
                 response.EnsureSuccessStatusCode();
 
                 var json = await response.Content.ReadAsStringAsync(ct);
-                var bars = JsonSerializer.Deserialize<List<IntradayBar>>(json);
+                var bars = JsonSerializer.Deserialize<List<IntradayBar>>(json, _options);
 
                 if (bars == null || bars.Count == 0)
                 {
@@ -164,9 +172,14 @@ public class EodHistoricalDataFeed : LiveFeed
         var currency = _config.ResolveCurrency(symbol, _logger);
         var asset = new Stock(symbol, currency);
 
+        if (!bar.IsValidPrice)
+        {
+            _logger.LogDebug("Invalid price data for {Symbol} at {Time}", symbol, bar.Datetime);
+            return;
+        }
         var evt = new Event(DateTime.SpecifyKind(time, DateTimeKind.Utc), new List<PriceItem>
         {
-            new PriceItem(asset, bar.Open, bar.High, bar.Low, bar.Close, bar.Volume, timespan)
+            new PriceItem(asset, bar.Open.Value, bar.High.Value, bar.Low.Value, bar.Close.Value, bar.Volume ?? 0, timespan)
         });
 
         await SendAsync(evt);
@@ -211,21 +224,24 @@ public class EodHistoricalDataFeed : LiveFeed
     private class IntradayBar
     {
         [JsonPropertyName("datetime")]
+        [JsonConverter(typeof(SafeDateTimeConverter))]
         public DateTime Datetime { get; set; }
 
         [JsonPropertyName("open")]
-        public decimal Open { get; set; }
+        public decimal? Open { get; set; }
 
         [JsonPropertyName("high")]
-        public decimal High { get; set; }
+        public decimal? High { get; set; }
 
         [JsonPropertyName("low")]
-        public decimal Low { get; set; }
+        public decimal? Low { get; set; }
 
         [JsonPropertyName("close")]
-        public decimal Close { get; set; }
+        public decimal? Close { get; set; }
 
         [JsonPropertyName("volume")]
-        public long Volume { get; set; }
+        public long? Volume { get; set; }
+
+        public bool IsValidPrice => Open.HasValue && High.HasValue && Low.HasValue && Close.HasValue;
     }
 }

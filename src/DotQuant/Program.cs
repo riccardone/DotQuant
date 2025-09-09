@@ -221,6 +221,7 @@ internal class Program
                 services.AddSingleton<IFeedFactory, CsvFeedFactory>();
                 services.AddSingleton<IFeedFactory, YahooFinanceFeedFactory>();
                 services.AddSingleton<IFeedFactory, EodHistoricalDataFeedFactory>();
+                services.AddSingleton<IFeedFactory, EodWebSocketFeedFactory>();
 
                 services.AddSingleton<ISessionGraphProvider, InMemorySessionGraphProvider>();
                 services.Configure<YahooFinanceOptions>(configuration.GetSection("YahooFinance"));
