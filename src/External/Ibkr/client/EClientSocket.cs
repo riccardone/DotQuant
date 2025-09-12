@@ -70,7 +70,7 @@ namespace IBApi
         protected virtual Stream createClientStream(string host, int port)
         {
             tcpClient = new TcpClient(host, port);
-            // SetKeepAlive(true, 2000, 100); // Disabled for .NET 6+ compatibility
+            // SetKeepAlive(true, 2000, 100); // Disabled for .NET 8 compatibility
             tcpClient.NoDelay = true;
 
             return tcpClient.GetStream();

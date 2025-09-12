@@ -109,6 +109,8 @@ public class IbkrFeed : LiveFeed, EWrapper
     {
         if (!_reqIdToSymbol.TryGetValue(tickerId, out var symbol)) return;
         if (field != 4) return; // 4 = LAST_PRICE
+
+        _logger.LogInformation("Received tick: {Symbol} price={Price}", symbol, price);
         var now = DateTime.UtcNow;
         if (_lastSeen.TryGetValue(symbol.ToString(), out var last) && (now - last).TotalSeconds < 1)
             return;
@@ -123,12 +125,62 @@ public class IbkrFeed : LiveFeed, EWrapper
             _channel.TryWrite(evt);
     }
 
+    // Log all error overloads for IBKR troubleshooting
+    public void error(int id, long time, int code, string msg, string advancedOrderRejectJson)
+    {
+        // Connection status codes: log as Information
+        if (code == 2104 || code == 2106 || code == 2158)
+        {
+            _logger.LogInformation("IBKR connection status: id={Id} code={Code} msg={Msg}", id, code, msg);
+            return;
+        }
+        // No security definition found: log with symbol context
+        if (code == 200)
+        {
+            if (_reqIdToSymbol.TryGetValue(id, out var symbol))
+                _logger.LogError("IBKR error: No security definition for {Symbol} (id={Id} code={Code} msg={Msg})", symbol, id, code, msg);
+            else
+                _logger.LogError("IBKR error: No security definition (id={Id} code={Code} msg={Msg})", id, code, msg);
+            return;
+        }
+        // All other errors
+        _logger.LogError("IBKR error: id={Id} code={Code} msg={Msg} advanced={Advanced}", id, code, msg, advancedOrderRejectJson);
+    }
+    public void error(Exception e)
+    {
+        _logger.LogError(e, "IBKR error");
+    }
+    public void error(string str)
+    {
+        _logger.LogError("IBKR error: {Msg}", str);
+    }
+    public void error(int id, int code, string msg)
+    {
+        _logger.LogError("IBKR error {Code}: {Msg}", code, msg);
+    }
+
+    // Log all tick types for diagnostics
+    public void tickSize(int tickerId, int field, decimal size)
+    {
+        if (_reqIdToSymbol.TryGetValue(tickerId, out var symbol))
+            _logger.LogInformation("tickSize: {Symbol} field={Field} size={Size}", symbol, field, size);
+    }
+    public void tickGeneric(int tickerId, int field, double value)
+    {
+        if (_reqIdToSymbol.TryGetValue(tickerId, out var symbol))
+            _logger.LogInformation("tickGeneric: {Symbol} field={Field} value={Value}", symbol, field, value);
+    }
+    public void tickString(int tickerId, int field, string value)
+    {
+        if (_reqIdToSymbol.TryGetValue(tickerId, out var symbol))
+            _logger.LogInformation("tickString: {Symbol} field={Field} value={Value}", symbol, field, value);
+    }
+
     // --- EWrapper required methods (empty stubs) ---
     public void openOrder(int orderId, IBApi.Contract contract, IBApi.Order order, IBApi.OrderState orderState) { }
     public void completedOrder(IBApi.Contract contract, IBApi.Order order, IBApi.OrderState orderState) { }
     public void orderStatus(int orderId, string status, decimal filled, decimal remaining, double avgFillPrice, long permId, int parentId, double lastFillPrice, int clientId, string whyHeld, double mktCapPrice) { }
     public void updatePortfolio(IBApi.Contract contract, decimal position, double marketPrice, double marketValue, double averageCost, double unrealizedPNL, double realizedPNL, string accountName) { }
-    public void tickSize(int tickerId, int field, decimal size) { }
     public void tickOptionComputation(int tickerId, int field, int tickAttrib, double impliedVol, double delta, double optPrice, double pvDividend, double gamma, double vega, double theta, double undPrice) { }
     public void updateMktDepth(int tickerId, int position, int operation, int side, double price, decimal size) { }
     public void updateMktDepthL2(int tickerId, int position, string marketMaker, int operation, int side, double price, decimal size, bool isSmartDepth) { }
@@ -140,8 +192,6 @@ public class IbkrFeed : LiveFeed, EWrapper
     public void pnlSingle(int reqId, decimal pos, double dailyPnL, double unrealizedPnL, double realizedPnL, double value) { }
     public void tickByTickAllLast(int reqId, int tickType, long time, double price, decimal size, TickAttribLast tickAttribLast, string exchange, string specialConditions) { }
     public void tickByTickBidAsk(int reqId, long time, double bidPrice, double askPrice, decimal bidSize, decimal askSize, TickAttribBidAsk tickAttribBidAsk) { }
-    public void tickString(int tickerId, int field, string value) { }
-    public void tickGeneric(int tickerId, int field, double value) { }
     public void tickEFP(int tickerId, int tickType, double basisPoints, string formattedBasisPoints, double totalDividends, int holdDays, string futureExpiry, double dividendImpact, double dividendsToExpiry) { }
     public void deltaNeutralValidation(int reqId, IBApi.DeltaNeutralContract deltaNeutralContract) { }
     public void tickSnapshotEnd(int reqId) { }
@@ -206,10 +256,22 @@ public class IbkrFeed : LiveFeed, EWrapper
     // Error and commission stubs
     public void commissionAndFeesReport(CommissionAndFeesReport commissionAndFeesReport) { }
     //public void commissionReport(CommissionReport commissionReport) { }
-    public void error(int id, long time, int code, string msg, string advancedOrderRejectJson) { }
-    public void error(Exception e) => _logger.LogError(e, "IBKR error");
-    public void error(string str) => _logger.LogError("IBKR error: {Msg}", str);
-    public void error(int id, int code, string msg) => _logger.LogError("IBKR error {Code}: {Msg}", code, msg);
+    //public void error(int id, long time, int code, string msg, string advancedOrderRejectJson)
+    //{
+    //    _logger.LogError("IBKR error: id={Id} code={Code} msg={Msg} advanced={Advanced}", id, code, msg, advancedOrderRejectJson);
+    //}
+    //public void error(Exception e)
+    //{
+    //    _logger.LogError(e, "IBKR error");
+    //}
+    //public void error(string str)
+    //{
+    //    _logger.LogError("IBKR error: {Msg}", str);
+    //}
+    //public void error(int id, int code, string msg)
+    //{
+    //    _logger.LogError("IBKR error {Code}: {Msg}", code, msg);
+    //}
     public void connectionClosed() => _logger.LogWarning("IBKR connection closed");
     // ProtoBuf and new methods
     public void replaceFAEnd(int reqId, string text) { }
