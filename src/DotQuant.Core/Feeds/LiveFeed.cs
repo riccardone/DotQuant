@@ -36,9 +36,9 @@ public abstract class LiveFeed : IFeed
 
         var isOpen = await _marketStatusService.IsMarketOpenAsync(symbol, ct);
         if (!isOpen)
-        {
             _logger?.LogInformation("Market is closed for {Symbol}, skipping tick.", symbol);
-        }
+        else
+            _logger?.LogDebug("Market is open for {Symbol}.", symbol);
 
         return isOpen;
     }

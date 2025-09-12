@@ -31,6 +31,7 @@
 		<ProjectReference Include="..\DotQuant.Core\DotQuant.Core.csproj" />
 		<ProjectReference Include="..\DotQuant.Feeds.Csv\DotQuant.Feeds.Csv.csproj" />
 		<ProjectReference Include="..\DotQuant.Feeds.EodHistoricalData\DotQuant.Feeds.EodHistoricalData.csproj" />
+		<ProjectReference Include="..\DotQuant.Feeds.Ibkr\DotQuant.Feeds.Ibkr.csproj" />
 		<ProjectReference Include="..\DotQuant.Feeds.YahooFinance\DotQuant.Feeds.YahooFinance.csproj" />
 	</ItemGroup>
 

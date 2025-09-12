@@ -15,6 +15,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Feeds.YahooFinance
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Feeds.EodHistoricalData", "DotQuant.Feeds.EodHistoricalData\DotQuant.Feeds.EodHistoricalData.csproj", "{83CDB203-5168-4581-ABF0-463E863400F0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Feeds.Ibkr", "DotQuant.Feeds.Ibkr\DotQuant.Feeds.Ibkr.csproj", "{A5C52145-969D-436F-9E1D-1186A994C024}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "External", "External", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Ibkr", "Ibkr", "{BE73D1CE-FEE7-4B6B-AD0D-B7B9506AC490}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpAPI", "External\Ibkr\client\CSharpAPI.csproj", "{A072CA4B-D48B-1803-B653-36CADB71F3FF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,9 +53,21 @@ Global
 		{83CDB203-5168-4581-ABF0-463E863400F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{83CDB203-5168-4581-ABF0-463E863400F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{83CDB203-5168-4581-ABF0-463E863400F0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A5C52145-969D-436F-9E1D-1186A994C024}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A5C52145-969D-436F-9E1D-1186A994C024}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A5C52145-969D-436F-9E1D-1186A994C024}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A5C52145-969D-436F-9E1D-1186A994C024}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A072CA4B-D48B-1803-B653-36CADB71F3FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A072CA4B-D48B-1803-B653-36CADB71F3FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A072CA4B-D48B-1803-B653-36CADB71F3FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A072CA4B-D48B-1803-B653-36CADB71F3FF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{BE73D1CE-FEE7-4B6B-AD0D-B7B9506AC490} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{A072CA4B-D48B-1803-B653-36CADB71F3FF} = {BE73D1CE-FEE7-4B6B-AD0D-B7B9506AC490}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7DAE249B-AC7E-4E65-8DFD-2A6BCC8F1B2E}

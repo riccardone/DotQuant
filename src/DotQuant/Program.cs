@@ -9,6 +9,7 @@ using DotQuant.Core.Services;
 using DotQuant.Core.Strategies;
 using DotQuant.Feeds.Csv;
 using DotQuant.Feeds.EodHistoricalData;
+using DotQuant.Feeds.Ibkr;
 using DotQuant.Feeds.YahooFinance;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -222,6 +223,7 @@ internal class Program
                 services.AddSingleton<IFeedFactory, YahooFinanceFeedFactory>();
                 services.AddSingleton<IFeedFactory, EodHistoricalDataFeedFactory>();
                 services.AddSingleton<IFeedFactory, EodWebSocketFeedFactory>();
+                services.AddSingleton<IFeedFactory, IbkrFeedFactory>();
 
                 services.AddSingleton<ISessionGraphProvider, InMemorySessionGraphProvider>();
                 services.Configure<YahooFinanceOptions>(configuration.GetSection("YahooFinance"));

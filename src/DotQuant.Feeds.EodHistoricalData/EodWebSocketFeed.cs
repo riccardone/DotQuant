@@ -17,7 +17,7 @@ public class EodWebSocketFeed : LiveFeed
     private readonly ILogger<EodWebSocketFeed> _logger;
     private readonly string _apiKey;
     private readonly string[] _symbols;
-    private ClientWebSocket _webSocket;
+    private ClientWebSocket? _webSocket;
     private CancellationToken _ct;
     private readonly ConcurrentDictionary<string, DateTime> _lastSeen = new();
     private readonly IConfiguration _config;
@@ -40,16 +40,33 @@ public class EodWebSocketFeed : LiveFeed
         {
             try
             {
+                // Check if at least one market is open before subscribing
+                var openSymbols = new List<string>();
+                foreach (var symbolStr in _symbols)
+                {
+                    var parts = symbolStr.Split('.');
+                    if (parts.Length != 2) continue;
+                    var symbol = new Symbol(parts[0], parts[1]);
+                    if (await IsMarketOpenAsync(symbol, _ct))
+                        openSymbols.Add(symbolStr);
+                }
+
+                if (openSymbols.Count == 0)
+                {
+                    _logger.LogInformation("All markets are closed for the requested symbols. Will retry in {Delay} seconds...", reconnectDelay.TotalSeconds);
+                    await Task.Delay(reconnectDelay, ct);
+                    continue;
+                }
+
                 _webSocket?.Dispose();
                 _webSocket = new ClientWebSocket();
 
-                var region = ResolveWebSocketRegion();
-                var uri = new Uri($"wss://ws.eodhistoricaldata.com/ws/{region}?api_token={_apiKey}");
+                var uri = new Uri($"ws://ws.eodhistoricaldata.com/ws?api_token={_apiKey}");
 
                 await _webSocket.ConnectAsync(uri, _ct);
-                _logger.LogInformation("Connected to EOD WebSocket for region {Region}", region);
+                _logger.LogInformation("Connected to EOD WebSocket");
 
-                await SubscribeToSymbolsAsync();
+                await SubscribeToSymbolsAsync(openSymbols);
                 await ReceiveLoop(channel);
 
                 if (_webSocket.CloseStatus.HasValue)
@@ -72,30 +89,39 @@ public class EodWebSocketFeed : LiveFeed
         }
     }
 
-    private async Task SubscribeToSymbolsAsync()
+    private async Task SubscribeToSymbolsAsync(List<string> symbols)
     {
         var msg = new
         {
             action = "subscribe",
-            symbols = string.Join(",", _symbols)
+            symbols = string.Join(",", symbols)
         };
 
         var json = JsonSerializer.Serialize(msg);
         var bytes = Encoding.UTF8.GetBytes(json);
-        await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _ct);
+        await _webSocket?.SendAsync(bytes, WebSocketMessageType.Text, true, _ct);
         _logger.LogInformation("Subscribed to symbols: {Symbols}", msg.symbols);
     }
 
     private async Task ReceiveLoop(ChannelWriter<Event> channel)
     {
-        while (!_ct.IsCancellationRequested && _webSocket.State == WebSocketState.Open)
+        while (!_ct.IsCancellationRequested && _webSocket?.State == WebSocketState.Open)
         {
             try
             {
                 var json = await ReadFullMessage();
                 if (string.IsNullOrWhiteSpace(json)) continue;
 
-                var tick = JsonSerializer.Deserialize<RealTimeTick>(json);
+                RealTimeTick? tick = null;
+                try
+                {
+                    tick = JsonSerializer.Deserialize<RealTimeTick>(json);
+                }
+                catch (Exception)
+                {
+                    // Ignore, will try error parsing below
+                }
+
                 if (tick != null && tick.IsValid())
                 {
                     if (_lastSeen.TryGetValue(tick.Symbol, out var last) && last == tick.TimeUtc)
@@ -103,9 +129,33 @@ public class EodWebSocketFeed : LiveFeed
 
                     _lastSeen[tick.Symbol] = tick.TimeUtc;
 
+                    var parts = tick.Symbol.Split('.');
+                    var symbol = new Symbol(parts[0], parts[1]);
+                    if (!await IsMarketOpenAsync(symbol, _ct))
+                        continue;
+
                     var evt = ConvertToEvent(tick);
                     await SendAsync(evt);
+                    continue;
                 }
+
+                // Try to parse as error
+                try
+                {
+                    var error = JsonSerializer.Deserialize<WebSocketError>(json);
+                    if (error != null && error.StatusCode != 0)
+                    {
+                        _logger.LogError("WebSocket error received: {StatusCode} - {Message}", error.StatusCode, error.Message);
+                        continue;
+                    }
+                }
+                catch (Exception)
+                {
+                    // Ignore, will log raw below
+                }
+
+                // If not tick or error, log raw message
+                _logger.LogWarning("Unrecognized WebSocket message: {Message}", json);
             }
             catch (WebSocketException ex)
             {
@@ -136,31 +186,6 @@ public class EodWebSocketFeed : LiveFeed
         return Encoding.UTF8.GetString(ms.ToArray());
     }
 
-    private string ResolveWebSocketRegion()
-    {
-        var regions = _symbols
-            .Select(s => s.Split('.').Last().ToUpperInvariant()) // extract exchange
-            .Select(exchange =>
-            {
-                var section = _config.GetSection($"MarketHours:{exchange}");
-                if (!section.Exists())
-                    throw new InvalidOperationException($"Missing MarketHours config for exchange: {exchange}");
-
-                var region = section["Region"];
-                if (string.IsNullOrWhiteSpace(region))
-                    throw new InvalidOperationException($"Missing 'Region' for exchange {exchange} in config");
-
-                return region.Trim().ToLowerInvariant();
-            })
-            .Distinct()
-            .ToList();
-
-        if (regions.Count > 1)
-            throw new InvalidOperationException($"Cannot use multiple regions in one WebSocket feed: {string.Join(", ", regions)}");
-
-        return regions.First();
-    }
-
     private Event ConvertToEvent(RealTimeTick tick)
     {
         var parts = tick.Symbol.Split('.');
@@ -183,5 +208,11 @@ public class EodWebSocketFeed : LiveFeed
         [JsonPropertyName("t")] public DateTime TimeUtc { get; set; }
 
         public bool IsValid() => !string.IsNullOrEmpty(Symbol) && Price > 0 && TimeUtc > DateTime.MinValue;
+    }
+
+    private class WebSocketError
+    {
+        [JsonPropertyName("status_code")] public int StatusCode { get; set; }
+        [JsonPropertyName("message")] public string Message { get; set; }
     }
 }
