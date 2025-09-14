@@ -58,14 +58,6 @@ public abstract class LiveFeed : IFeed
     }
 
     /// <summary>
-    /// Send an event to all active channels. Blocks until all writes are complete.
-    /// </summary>
-    protected void Send(Event evt)
-    {
-        SendAsync(evt).GetAwaiter().GetResult();
-    }
-
-    /// <summary>
     /// Send an event to all active channels asynchronously.
     /// </summary>
     protected async Task SendAsync(Event evt)

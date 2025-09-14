@@ -17,9 +17,9 @@ public class IbkrFeed : LiveFeed, EWrapper
     private readonly EClientSocket _client;
     private readonly EReaderSignal _signal;
     private readonly ConcurrentDictionary<int, Symbol> _reqIdToSymbol = new();
-    private readonly ConcurrentDictionary<string, DateTime> _lastSeen = new();
+    private readonly BlockingCollection<Event> _eventQueue = new();
     private CancellationToken _ct;
-    private ChannelWriter<Event>? _channel;
+    private Task? _backgroundTask;
     private int _nextReqId = 1;
     private bool _connected = false;
 
@@ -40,7 +40,6 @@ public class IbkrFeed : LiveFeed, EWrapper
     public override async Task PlayAsync(ChannelWriter<Event> channel, CancellationToken ct)
     {
         _ct = ct;
-        _channel = channel;
         var connected = await TryConnectAsync();
         if (!connected)
         {
@@ -48,8 +47,27 @@ public class IbkrFeed : LiveFeed, EWrapper
             return;
         }
         await Task.Delay(1000, ct); // Wait for connection
-        SubscribeToSymbols();
+        await SubscribeToSymbolsAsync();
+
+        // Start background event processing thread (now async)
+        _backgroundTask = Task.Run(() => ProcessEventsAsync(channel, ct), ct);
+
         await Task.Delay(-1, ct); // Keep running until cancelled
+    }
+
+    private async Task ProcessEventsAsync(ChannelWriter<Event> channel, CancellationToken ct)
+    {
+        try
+        {
+            foreach (var evt in _eventQueue.GetConsumingEnumerable(ct))
+            {
+                await SendAsync(evt); // Use async event delivery
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Graceful shutdown
+        }
     }
 
     private async Task<bool> TryConnectAsync()
@@ -68,7 +86,6 @@ public class IbkrFeed : LiveFeed, EWrapper
                     reader.processMsgs();
                 }
             });
-            // Give a short time for connection to establish
             await Task.Delay(500);
             if (!_client.IsConnected())
                 throw new InvalidOperationException("IBKR client not connected after eConnect.");
@@ -83,19 +100,24 @@ public class IbkrFeed : LiveFeed, EWrapper
         }
     }
 
-    private void SubscribeToSymbols()
+    private async Task SubscribeToSymbolsAsync()
     {
         foreach (var symbolStr in _symbols)
         {
             var parts = symbolStr.Split('.');
             if (parts.Length != 2) continue;
             var symbol = new Symbol(parts[0], parts[1]);
+            if (!await IsMarketOpenAsync(symbol, _ct))
+            {
+                _logger.LogInformation("Market is closed for {Symbol}, skipping subscription.", symbolStr);
+                continue;
+            }
             var contract = new IBApi.Contract
             {
                 Symbol = parts[0],
                 SecType = "STK",
                 Exchange = parts[1],
-                Currency = "USD" // fallback, ideally resolve from config
+                Currency = "USD"
             };
             int reqId = _nextReqId++;
             _reqIdToSymbol[reqId] = symbol;
@@ -112,68 +134,28 @@ public class IbkrFeed : LiveFeed, EWrapper
 
         _logger.LogInformation("Received tick: {Symbol} price={Price}", symbol, price);
         var now = DateTime.UtcNow;
-        if (_lastSeen.TryGetValue(symbol.ToString(), out var last) && (now - last).TotalSeconds < 1)
-            return;
-        _lastSeen[symbol.ToString()] = now;
         var currency = "USD"; // fallback
         var asset = new Stock(symbol, Currency.GetInstance(currency));
         var evt = new Event(now, new List<PriceItem>
         {
             new PriceItem(asset, (decimal)price, (decimal)price, (decimal)price, (decimal)price, 0, TimeSpan.FromSeconds(1))
         });
-        if (_channel != null)
-            _channel.TryWrite(evt);
+        _eventQueue.Add(evt); // Enqueue for background processing
     }
 
-    // Log all error overloads for IBKR troubleshooting
-    public void error(int id, long time, int code, string msg, string advancedOrderRejectJson)
-    {
-        // Connection status codes: log as Information
-        if (code == 2104 || code == 2106 || code == 2158)
-        {
-            _logger.LogInformation("IBKR connection status: id={Id} code={Code} msg={Msg}", id, code, msg);
-            return;
-        }
-        // No security definition found: log with symbol context
-        if (code == 200)
-        {
-            if (_reqIdToSymbol.TryGetValue(id, out var symbol))
-                _logger.LogError("IBKR error: No security definition for {Symbol} (id={Id} code={Code} msg={Msg})", symbol, id, code, msg);
-            else
-                _logger.LogError("IBKR error: No security definition (id={Id} code={Code} msg={Msg})", id, code, msg);
-            return;
-        }
-        // All other errors
-        _logger.LogError("IBKR error: id={Id} code={Code} msg={Msg} advanced={Advanced}", id, code, msg, advancedOrderRejectJson);
-    }
-    public void error(Exception e)
-    {
-        _logger.LogError(e, "IBKR error");
-    }
-    public void error(string str)
-    {
-        _logger.LogError("IBKR error: {Msg}", str);
-    }
-    public void error(int id, int code, string msg)
-    {
-        _logger.LogError("IBKR error {Code}: {Msg}", code, msg);
-    }
-
-    // Log all tick types for diagnostics
     public void tickSize(int tickerId, int field, decimal size)
     {
-        if (_reqIdToSymbol.TryGetValue(tickerId, out var symbol))
-            _logger.LogInformation("tickSize: {Symbol} field={Field} size={Size}", symbol, field, size);
+        throw new NotImplementedException();
     }
-    public void tickGeneric(int tickerId, int field, double value)
-    {
-        if (_reqIdToSymbol.TryGetValue(tickerId, out var symbol))
-            _logger.LogInformation("tickGeneric: {Symbol} field={Field} value={Value}", symbol, field, value);
-    }
+
     public void tickString(int tickerId, int field, string value)
     {
-        if (_reqIdToSymbol.TryGetValue(tickerId, out var symbol))
-            _logger.LogInformation("tickString: {Symbol} field={Field} value={Value}", symbol, field, value);
+        throw new NotImplementedException();
+    }
+
+    public void tickGeneric(int tickerId, int field, double value)
+    {
+        throw new NotImplementedException();
     }
 
     // --- EWrapper required methods (empty stubs) ---
@@ -252,26 +234,41 @@ public class IbkrFeed : LiveFeed, EWrapper
     public void tickByTickMidPoint(int reqId, long time, double midPoint) { }
     public void orderBound(long orderId, int apiClientId, int apiOrderId) { }
     public void completedOrdersEnd() { }
+    public void error(int id, long time, int code, string msg, string advancedOrderRejectJson)
+    {
+        // Connection status codes: log as Information
+        if (code == 2104 || code == 2106 || code == 2158)
+        {
+            _logger.LogInformation("IBKR connection status: id={Id} code={Code} msg={Msg}", id, code, msg);
+            return;
+        }
+        // No security definition found: log with symbol context
+        if (code == 200)
+        {
+            if (_reqIdToSymbol.TryGetValue(id, out var symbol))
+                _logger.LogError("IBKR error: No security definition for {Symbol} (id={Id} code={Code} msg={Msg})", symbol, id, code, msg);
+            else
+                _logger.LogError("IBKR error: No security definition (id={Id} code={Code} msg={Msg})", id, code, msg);
+            return;
+        }
+        // All other errors
+        _logger.LogError("IBKR error: id={Id} code={Code} msg={Msg} advanced={Advanced}", id, code, msg, advancedOrderRejectJson);
+    }
+    public void error(Exception e)
+    {
+        _logger.LogError(e, "IBKR error");
+    }
+    public void error(string str)
+    {
+        _logger.LogError("IBKR error: {Msg}", str);
+    }
+    public void error(int id, int code, string msg)
+    {
+        _logger.LogError("IBKR error {Code}: {Msg}", code, msg);
+    }
     public void currentTime(long time) { }
     // Error and commission stubs
     public void commissionAndFeesReport(CommissionAndFeesReport commissionAndFeesReport) { }
-    //public void commissionReport(CommissionReport commissionReport) { }
-    //public void error(int id, long time, int code, string msg, string advancedOrderRejectJson)
-    //{
-    //    _logger.LogError("IBKR error: id={Id} code={Code} msg={Msg} advanced={Advanced}", id, code, msg, advancedOrderRejectJson);
-    //}
-    //public void error(Exception e)
-    //{
-    //    _logger.LogError(e, "IBKR error");
-    //}
-    //public void error(string str)
-    //{
-    //    _logger.LogError("IBKR error: {Msg}", str);
-    //}
-    //public void error(int id, int code, string msg)
-    //{
-    //    _logger.LogError("IBKR error {Code}: {Msg}", code, msg);
-    //}
     public void connectionClosed() => _logger.LogWarning("IBKR connection closed");
     // ProtoBuf and new methods
     public void replaceFAEnd(int reqId, string text) { }
