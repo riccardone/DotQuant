@@ -1,4 +1,5 @@
 using DotQuant.Core.Common;
+using DotQuant.Core.Extensions;
 using DotQuant.Core.Feeds;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -100,6 +101,41 @@ public class IbkrFeed : LiveFeed, EWrapper
         }
     }
 
+    private static string MapToIbkrExchange(string exchange)
+    {
+        // Map common European exchanges to IBKR's expected values
+        return exchange.ToUpperInvariant() switch
+        {
+            "BIT" => "SMART", // Borsa Italiana (IBKR: BIT)
+            "MTA" => "SMART", // legacy alias, but IBKR expects BIT
+            "MIB" => "SMART", // legacy alias, but IBKR expects BIT
+            "PA" => "SMART", // Paris
+            "XETR" => "SMART", // Xetra
+            "MC" => "SMART", // Madrid
+            "AMS" => "SMART", // Amsterdam
+            "BRU" => "SMART", // Brussels
+            "STO" => "SMART", // Stockholm
+            "LSE" => "SMART", // London
+            "SIX" => "SMART", // Swiss
+            "TSE" => "SMART", // Tokyo
+            "HKEX" => "SMART", // Hong Kong
+            "ASX" => "SMART", // Australia
+            _ => exchange // fallback to original
+        };
+    }
+
+    private static string MapToPrimaryExchange(string exchange)
+    {
+        // For Italian stocks, IBKR expects PrimaryExchange = "BIT"
+        return exchange.ToUpperInvariant() switch
+        {
+            "BIT" => "BIT",
+            "MTA" => "BIT",
+            "MIB" => "BIT",
+            _ => exchange
+        };
+    }
+
     private async Task SubscribeToSymbolsAsync()
     {
         foreach (var symbolStr in _symbols)
@@ -112,18 +148,35 @@ public class IbkrFeed : LiveFeed, EWrapper
                 _logger.LogInformation("Market is closed for {Symbol}, skipping subscription.", symbolStr);
                 continue;
             }
+            var ibkrExchange = MapToIbkrExchange(parts[1]);
+            var primaryExchange = MapToPrimaryExchange(parts[1]);
+            var currency = _config.ResolveCurrency(symbol, _logger).ToString();
             var contract = new IBApi.Contract
             {
                 Symbol = parts[0],
                 SecType = "STK",
-                Exchange = parts[1],
-                Currency = "USD"
+                Exchange = ibkrExchange,
+                PrimaryExch = primaryExchange,
+                Currency = currency
             };
             int reqId = _nextReqId++;
             _reqIdToSymbol[reqId] = symbol;
-            _client.reqMktData(reqId, contract, "", false, false, null);
-            _logger.LogInformation("Subscribed to {Symbol}", symbolStr);
+            // Request contract details first to resolve ambiguities
+            _client.reqContractDetails(reqId, contract);
+            _logger.LogInformation("Requested contract details for {Symbol} (IBKR Exchange={Exchange}, Primary={PrimaryExchange}, Currency={Currency})", symbolStr, ibkrExchange, primaryExchange, currency);
+            // Do NOT call reqMktData here; defer until contractDetails callback
         }
+    }
+
+    // EWrapper contractDetails callback
+    public void contractDetails(int reqId, IBApi.ContractDetails contractDetails)
+    {
+        if (!_reqIdToSymbol.TryGetValue(reqId, out var symbol)) return;
+        var contract = contractDetails.Contract;
+        _logger.LogInformation("Received contract details for {Symbol}: {Contract}", symbol, contract);
+        // Now safe to request market data
+        _client.reqMktData(reqId, contract, "", false, false, null);
+        _logger.LogInformation("Subscribed to {Symbol} (IBKR Exchange={Exchange}, Primary={PrimaryExchange}, Currency={Currency})", symbol, contract.Exchange, contract.PrimaryExch, contract.Currency);
     }
 
     // EWrapper implementation (tickPrice only for now)
@@ -134,8 +187,8 @@ public class IbkrFeed : LiveFeed, EWrapper
 
         _logger.LogInformation("Received tick: {Symbol} price={Price}", symbol, price);
         var now = DateTime.UtcNow;
-        var currency = "USD"; // fallback
-        var asset = new Stock(symbol, Currency.GetInstance(currency));
+        var currency = _config.ResolveCurrency(symbol, _logger);
+        var asset = new Stock(symbol, currency);
         var evt = new Event(now, new List<PriceItem>
         {
             new PriceItem(asset, (decimal)price, (decimal)price, (decimal)price, (decimal)price, 0, TimeSpan.FromSeconds(1))
@@ -186,7 +239,6 @@ public class IbkrFeed : LiveFeed, EWrapper
     public void updateAccountTime(string timeStamp) { }
     public void accountDownloadEnd(string account) { }
     public void openOrderEnd() { }
-    public void contractDetails(int reqId, IBApi.ContractDetails contractDetails) { }
     public void contractDetailsEnd(int reqId) { }
     public void execDetails(int reqId, IBApi.Contract contract, IBApi.Execution execution) { }
     public void execDetailsEnd(int reqId) { }
