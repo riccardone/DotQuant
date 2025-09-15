@@ -2,7 +2,7 @@
   "profiles": {
     "DotQuant": {
       "commandName": "Project",
-      "commandLineArgs": "--feed ibkr --broker trading212 --tickers ENI.BIT --live --interval 00:00:10"
+      "commandLineArgs": "--feed ibkr --broker trading212 --tickers EUNL.DE --live --interval 00:00:10"
     },
     "Container (Dockerfile)": {
       "commandName": "Docker"

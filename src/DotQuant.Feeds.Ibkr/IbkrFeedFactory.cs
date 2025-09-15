@@ -13,13 +13,14 @@ public class IbkrFeedFactory : LiveFeedFactoryBase
 
     public override IFeed Create(IServiceProvider sp, IConfiguration config, ILogger logger, IDictionary<string, string?> args)
     {
-        var (symbols, _, _, _) = ParseCommonArgs(args);
-        var symbolStrings = symbols.Select(s => s.ToString()).ToArray();
+        var feedArgs = ParseCommonArgs(args); // FeedArgs, not tuple
+        var symbolStrings = feedArgs.Symbols.Select(s => s.ToString()).ToArray();
         return new IbkrFeed(
             symbols: symbolStrings,
             logger: sp.GetRequiredService<ILogger<IbkrFeed>>(),
             config: config,
-            marketStatusService: sp.GetRequiredService<IMarketStatusService>()
+            marketStatusService: sp.GetRequiredService<IMarketStatusService>(),
+            interval: feedArgs.Interval
         );
     }
 }

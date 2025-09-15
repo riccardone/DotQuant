@@ -23,12 +23,13 @@ public class IbkrFeed : LiveFeed, EWrapper
     private Task? _backgroundTask;
     private int _nextReqId = 1;
     private bool _connected = false;
+    private readonly TimeSpan _interval;
 
     private string IbkrHost => _config["Ibkr:Host"] ?? "127.0.0.1";
     private int IbkrPort => int.TryParse(_config["Ibkr:Port"], out var port) ? port : 7497;
     private int IbkrClientId => int.TryParse(_config["Ibkr:ClientId"], out var id) ? id : 1;
 
-    public IbkrFeed(string[] symbols, ILogger<IbkrFeed> logger, IConfiguration config, IMarketStatusService marketStatusService)
+    public IbkrFeed(string[] symbols, ILogger<IbkrFeed> logger, IConfiguration config, IMarketStatusService marketStatusService, TimeSpan? interval = null)
     {
         _symbols = symbols;
         _logger = logger;
@@ -36,6 +37,7 @@ public class IbkrFeed : LiveFeed, EWrapper
         _signal = new EReaderMonitorSignal();
         _client = new EClientSocket(this, _signal);
         EnableMarketStatus(marketStatusService, logger);
+        _interval = interval ?? TimeSpan.FromSeconds(5);
     }
 
     public override async Task PlayAsync(ChannelWriter<Event> channel, CancellationToken ct)
@@ -138,6 +140,8 @@ public class IbkrFeed : LiveFeed, EWrapper
 
     private async Task SubscribeToSymbolsAsync()
     {
+        int intervalSeconds = (int)Math.Round(_interval.TotalSeconds);
+        if (intervalSeconds < 5) intervalSeconds = 5; // IBKR minimum
         foreach (var symbolStr in _symbols)
         {
             var parts = symbolStr.Split('.');
@@ -148,23 +152,42 @@ public class IbkrFeed : LiveFeed, EWrapper
                 _logger.LogInformation("Market is closed for {Symbol}, skipping subscription.", symbolStr);
                 continue;
             }
-            var ibkrExchange = MapToIbkrExchange(parts[1]);
-            var primaryExchange = MapToPrimaryExchange(parts[1]);
             var currency = _config.ResolveCurrency(symbol, _logger).ToString();
-            var contract = new IBApi.Contract
+            var isItalian = parts[1].Equals("BIT", StringComparison.OrdinalIgnoreCase) ||
+                            parts[1].Equals("MTA", StringComparison.OrdinalIgnoreCase) ||
+                            parts[1].Equals("MIB", StringComparison.OrdinalIgnoreCase);
+            IBApi.Contract contract;
+            if (isItalian)
             {
-                Symbol = parts[0],
-                SecType = "STK",
-                Exchange = ibkrExchange,
-                PrimaryExch = primaryExchange,
-                Currency = currency
-            };
+                contract = new IBApi.Contract
+                {
+                    Symbol = parts[0],
+                    SecType = "STK",
+                    Exchange = "SMART",
+                    PrimaryExch = "BIT",
+                    Currency = "EUR"
+                };
+                _logger.LogInformation("Using canonical IBKR contract for Italian stock: Symbol={Symbol}, Exchange=SMART, PrimaryExch=BIT, Currency=EUR", parts[0]);
+            }
+            else
+            {
+                var ibkrExchange = MapToIbkrExchange(parts[1]);
+                var primaryExchange = MapToPrimaryExchange(parts[1]);
+                contract = new IBApi.Contract
+                {
+                    Symbol = parts[0],
+                    SecType = "STK",
+                    Exchange = ibkrExchange,
+                    PrimaryExch = primaryExchange,
+                    Currency = currency
+                };
+            }
             int reqId = _nextReqId++;
             _reqIdToSymbol[reqId] = symbol;
             // Request contract details first to resolve ambiguities
+            _logger.LogInformation("Requesting contract details for {Symbol}: Exchange={Exchange}, PrimaryExch={PrimaryExch}, Currency={Currency}", symbolStr, contract.Exchange, contract.PrimaryExch, contract.Currency);
             _client.reqContractDetails(reqId, contract);
-            _logger.LogInformation("Requested contract details for {Symbol} (IBKR Exchange={Exchange}, Primary={PrimaryExchange}, Currency={Currency})", symbolStr, ibkrExchange, primaryExchange, currency);
-            // Do NOT call reqMktData here; defer until contractDetails callback
+            // Only use reqMktData for live tick streaming
         }
     }
 
@@ -183,32 +206,60 @@ public class IbkrFeed : LiveFeed, EWrapper
     public void tickPrice(int tickerId, int field, double price, TickAttrib attribs)
     {
         if (!_reqIdToSymbol.TryGetValue(tickerId, out var symbol)) return;
-        if (field != 4) return; // 4 = LAST_PRICE
-
-        _logger.LogInformation("Received tick: {Symbol} price={Price}", symbol, price);
+        _logger.LogInformation("Received tickPrice: {Symbol} field={Field} price={Price}", symbol, field, price);
         var now = DateTime.UtcNow;
         var currency = _config.ResolveCurrency(symbol, _logger);
         var asset = new Stock(symbol, currency);
-        var evt = new Event(now, new List<PriceItem>
+        // Map IBKR fields to PriceItem fields
+        decimal? open = null, high = null, low = null, close = null;
+        switch (field)
         {
-            new PriceItem(asset, (decimal)price, (decimal)price, (decimal)price, (decimal)price, 0, TimeSpan.FromSeconds(1))
-        });
-        _eventQueue.Add(evt); // Enqueue for background processing
+            case 1: // bid
+                open = (decimal)price;
+                break;
+            case 2: // ask
+                high = (decimal)price;
+                break;
+            case 4: // last
+                close = (decimal)price;
+                break;
+            case 6: // high
+                high = (decimal)price;
+                break;
+            case 7: // low
+                low = (decimal)price;
+                break;
+            case 9: // close
+                close = (decimal)price;
+                break;
+        }
+        // Only emit event for last price (field 4) to avoid duplicates
+        if (field == 4)
+        {
+            var evt = new Event(now, new List<PriceItem>
+            {
+                new PriceItem(asset, open ?? (decimal)price, high ?? (decimal)price, low ?? (decimal)price, close ?? (decimal)price, 0, TimeSpan.FromSeconds(1))
+            });
+            _eventQueue.Add(evt);
+        }
     }
 
     public void tickSize(int tickerId, int field, decimal size)
     {
-        throw new NotImplementedException();
+        if (!_reqIdToSymbol.TryGetValue(tickerId, out var symbol)) return;
+        _logger.LogInformation("Received tickSize: {Symbol} field={Field} size={Size}", symbol, field, size);
     }
 
     public void tickString(int tickerId, int field, string value)
     {
-        throw new NotImplementedException();
+        if (!_reqIdToSymbol.TryGetValue(tickerId, out var symbol)) return;
+        _logger.LogInformation("Received tickString: {Symbol} field={Field} value={Value}", symbol, field, value);
     }
 
     public void tickGeneric(int tickerId, int field, double value)
     {
-        throw new NotImplementedException();
+        if (!_reqIdToSymbol.TryGetValue(tickerId, out var symbol)) return;
+        _logger.LogInformation("Received tickGeneric: {Symbol} field={Field} value={Value}", symbol, field, value);
     }
 
     // --- EWrapper required methods (empty stubs) ---
@@ -220,7 +271,6 @@ public class IbkrFeed : LiveFeed, EWrapper
     public void updateMktDepth(int tickerId, int position, int operation, int side, double price, decimal size) { }
     public void updateMktDepthL2(int tickerId, int position, string marketMaker, int operation, int side, double price, decimal size, bool isSmartDepth) { }
     public void position(string account, IBApi.Contract contract, decimal pos, double avgCost) { }
-    public void realtimeBar(int reqId, long time, double open, double high, double low, double close, decimal volume, decimal wap, int count) { }
     public void positionMulti(int reqId, string account, string modelCode, IBApi.Contract contract, decimal pos, double avgCost) { }
     public void securityDefinitionOptionParameter(int reqId, string exchange, int underlyingConId, string tradingClass, string multiplier, HashSet<string> expirations, HashSet<double> strikes) { }
     public void securityDefinitionOptionParameterEnd(int reqId) { }
@@ -231,7 +281,17 @@ public class IbkrFeed : LiveFeed, EWrapper
     public void deltaNeutralValidation(int reqId, IBApi.DeltaNeutralContract deltaNeutralContract) { }
     public void tickSnapshotEnd(int reqId) { }
     public void nextValidId(int orderId) { }
-    public void managedAccounts(string accountsList) { }
+
+    public void managedAccounts(string accountsList)
+    {
+        _logger.LogInformation("IBKR managed accounts: {Accounts}", accountsList);
+        // Optionally, split and log each account individually:
+        foreach (var account in accountsList.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            _logger.LogInformation("Available IBKR account: {Account}", account);
+        }
+    }
+
     public void accountSummary(int reqId, string account, string tag, string value, string currency) { }
     public void accountSummaryEnd(int reqId) { }
     public void bondContractDetails(int reqId, IBApi.ContractDetails contractDetails) { }
@@ -351,4 +411,9 @@ public class IbkrFeed : LiveFeed, EWrapper
     public void updateMarketDepthL2ProtoBuf(MarketDepthL2 marketDepthL2) { }
     public void marketDataTypeProtoBuf(MarketDataType marketDataType) { }
     public void tickReqParamsProtoBuf(TickReqParams tickReqParams) { }
+
+    public void realtimeBar(int reqId, long date, double open, double high, double low, double close, decimal volume, decimal WAP, int count)
+    {
+        throw new NotImplementedException();
+    }
 }

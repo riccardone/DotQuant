@@ -4,13 +4,14 @@ using Microsoft.Extensions.Logging;
 
 namespace DotQuant.Core.Feeds;
 
+public record FeedArgs(Symbol[] Symbols, DateTime Start, DateTime End, bool IsLive, TimeSpan? Interval);
+
 public abstract class LiveFeedFactoryBase : IFeedFactory
 {
     public abstract string Key { get; }
     public abstract string Name { get; }
 
-    protected (Symbol[] symbols, DateTime start, DateTime end, bool isLive) ParseCommonArgs(
-        IDictionary<string, string?> args)
+    protected FeedArgs ParseCommonArgs(IDictionary<string, string?> args)
     {
         if (!args.TryGetValue("--tickers", out var tickersStr) || string.IsNullOrWhiteSpace(tickersStr))
             throw new ArgumentException("Missing '--tickers' argument");
@@ -46,7 +47,14 @@ public abstract class LiveFeedFactoryBase : IFeedFactory
                 : throw new ArgumentException("Missing or invalid '--end'");
         }
 
-        return (symbols, start, end, isLive);
+        TimeSpan? interval = null;
+        if (args.TryGetValue("--interval", out var intervalStr) && !string.IsNullOrWhiteSpace(intervalStr))
+        {
+            if (TimeSpan.TryParse(intervalStr, out var parsed))
+                interval = parsed;
+        }
+
+        return new FeedArgs(symbols, start, end, isLive, interval);
     }
 
     public abstract IFeed Create(IServiceProvider sp, IConfiguration config, ILogger logger, IDictionary<string, string?> args);
