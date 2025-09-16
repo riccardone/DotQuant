@@ -9,22 +9,21 @@ public class Startup
 {
     public void ConfigureServices(IServiceCollection services)
     {
-        services.AddControllers();
-        services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen();
+        // Add controllers from DotQuant.Api
+        services.AddControllers()
+            .AddApplicationPart(typeof(Api.Controllers.SessionController).Assembly)
+            .AddControllersAsServices();
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
         if (env.IsDevelopment())
         {
-            app.UseSwagger();
-            app.UseSwaggerUI();
+            app.UseDeveloperExceptionPage();
         }
 
+        app.UseHttpsRedirection();
         app.UseRouting();
-        app.UseAuthorization();
-
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapControllers();

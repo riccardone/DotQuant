@@ -59,6 +59,8 @@ public class Trading212Broker : IBroker
         return _account;
     }
 
+    private decimal _cachedBalance = 0;
+
     public IAccount Sync()
     {
         try
@@ -70,8 +72,11 @@ public class Trading212Broker : IBroker
             if (accountData == null)
                 throw new InvalidOperationException("Account data fetch failed.");
 
+            if (accountData.Balance != _cachedBalance)
+                _logger.LogInformation("Synced account: Balance={Balance}, FreeFunds={FreeFunds}", accountData.Balance, accountData.FreeFunds);
+
             _account.UpdateFrom(accountData);
-            _logger.LogInformation("Synced account: Balance={Balance}, FreeFunds={FreeFunds}", accountData.Balance, accountData.FreeFunds);
+            _cachedBalance = accountData.Balance;
         }
         catch (Exception ex)
         {

@@ -42,6 +42,9 @@ public class IbkrFeed : LiveFeed, EWrapper
 
     public override async Task PlayAsync(ChannelWriter<Event> channel, CancellationToken ct)
     {
+        // Register the channel in LiveFeed so SendAsync can deliver events
+        var baseTask = base.PlayAsync(channel, ct);
+
         _ct = ct;
         var connected = await TryConnectAsync();
         if (!connected)
@@ -55,7 +58,7 @@ public class IbkrFeed : LiveFeed, EWrapper
         // Start background event processing thread (now async)
         _backgroundTask = Task.Run(() => ProcessEventsAsync(channel, ct), ct);
 
-        await Task.Delay(-1, ct); // Keep running until cancelled
+        await baseTask; // Wait for channel close
     }
 
     private async Task ProcessEventsAsync(ChannelWriter<Event> channel, CancellationToken ct)
@@ -153,36 +156,17 @@ public class IbkrFeed : LiveFeed, EWrapper
                 continue;
             }
             var currency = _config.ResolveCurrency(symbol, _logger).ToString();
-            var isItalian = parts[1].Equals("BIT", StringComparison.OrdinalIgnoreCase) ||
-                            parts[1].Equals("MTA", StringComparison.OrdinalIgnoreCase) ||
-                            parts[1].Equals("MIB", StringComparison.OrdinalIgnoreCase);
-            IBApi.Contract contract;
-            if (isItalian)
+            var ibkrExchange = MapToIbkrExchange(parts[1]);
+            var primaryExchange = MapToPrimaryExchange(parts[1]);
+            var contract = new IBApi.Contract
             {
-                contract = new IBApi.Contract
-                {
-                    Symbol = parts[0],
-                    SecType = "STK",
-                    Exchange = "SMART",
-                    PrimaryExch = "BIT",
-                    Currency = "EUR"
-                };
-                _logger.LogInformation("Using canonical IBKR contract for Italian stock: Symbol={Symbol}, Exchange=SMART, PrimaryExch=BIT, Currency=EUR", parts[0]);
-            }
-            else
-            {
-                var ibkrExchange = MapToIbkrExchange(parts[1]);
-                var primaryExchange = MapToPrimaryExchange(parts[1]);
-                contract = new IBApi.Contract
-                {
-                    Symbol = parts[0],
-                    SecType = "STK",
-                    Exchange = ibkrExchange,
-                    PrimaryExch = primaryExchange,
-                    Currency = currency
-                };
-            }
-            int reqId = _nextReqId++;
+                Symbol = parts[0],
+                SecType = "STK",
+                Exchange = ibkrExchange,
+                PrimaryExch = primaryExchange,
+                Currency = currency
+            };
+            var reqId = _nextReqId++;
             _reqIdToSymbol[reqId] = symbol;
             // Request contract details first to resolve ambiguities
             _logger.LogInformation("Requesting contract details for {Symbol}: Exchange={Exchange}, PrimaryExch={PrimaryExch}, Currency={Currency}", symbolStr, contract.Exchange, contract.PrimaryExch, contract.Currency);
@@ -206,60 +190,43 @@ public class IbkrFeed : LiveFeed, EWrapper
     public void tickPrice(int tickerId, int field, double price, TickAttrib attribs)
     {
         if (!_reqIdToSymbol.TryGetValue(tickerId, out var symbol)) return;
-        _logger.LogInformation("Received tickPrice: {Symbol} field={Field} price={Price}", symbol, field, price);
+        if (field.Equals(4))
+            _logger.LogInformation("Received tickPrice: {Symbol} field={Field} price={Price}", symbol, field, price);
+        else
+            return; // Ignore other fields for now
         var now = DateTime.UtcNow;
         var currency = _config.ResolveCurrency(symbol, _logger);
         var asset = new Stock(symbol, currency);
-        // Map IBKR fields to PriceItem fields
-        decimal? open = null, high = null, low = null, close = null;
-        switch (field)
-        {
-            case 1: // bid
-                open = (decimal)price;
-                break;
-            case 2: // ask
-                high = (decimal)price;
-                break;
-            case 4: // last
-                close = (decimal)price;
-                break;
-            case 6: // high
-                high = (decimal)price;
-                break;
-            case 7: // low
-                low = (decimal)price;
-                break;
-            case 9: // close
-                close = (decimal)price;
-                break;
-        }
-        // Only emit event for last price (field 4) to avoid duplicates
-        if (field == 4)
-        {
-            var evt = new Event(now, new List<PriceItem>
-            {
-                new PriceItem(asset, open ?? (decimal)price, high ?? (decimal)price, low ?? (decimal)price, close ?? (decimal)price, 0, TimeSpan.FromSeconds(1))
-            });
-            _eventQueue.Add(evt);
-        }
+        // Always set open/high/low/close to price for field=4
+        var priceItem = new PriceItem(
+            asset,
+            (decimal)price, // open
+            (decimal)price, // high
+            (decimal)price, // low
+            (decimal)price, // close
+            0,              // volume
+            TimeSpan.FromSeconds(1)
+        );
+        var evt = new Event(now, new List<PriceItem> { priceItem });
+        _eventQueue.Add(evt);
     }
 
     public void tickSize(int tickerId, int field, decimal size)
     {
         if (!_reqIdToSymbol.TryGetValue(tickerId, out var symbol)) return;
-        _logger.LogInformation("Received tickSize: {Symbol} field={Field} size={Size}", symbol, field, size);
+        _logger.LogDebug("Received tickSize: {Symbol} field={Field} size={Size}", symbol, field, size);
     }
 
     public void tickString(int tickerId, int field, string value)
     {
         if (!_reqIdToSymbol.TryGetValue(tickerId, out var symbol)) return;
-        _logger.LogInformation("Received tickString: {Symbol} field={Field} value={Value}", symbol, field, value);
+        _logger.LogDebug("Received tickString: {Symbol} field={Field} value={Value}", symbol, field, value);
     }
 
     public void tickGeneric(int tickerId, int field, double value)
     {
         if (!_reqIdToSymbol.TryGetValue(tickerId, out var symbol)) return;
-        _logger.LogInformation("Received tickGeneric: {Symbol} field={Field} value={Value}", symbol, field, value);
+        _logger.LogDebug("Received tickGeneric: {Symbol} field={Field} value={Value}", symbol, field, value);
     }
 
     // --- EWrapper required methods (empty stubs) ---
@@ -411,7 +378,6 @@ public class IbkrFeed : LiveFeed, EWrapper
     public void updateMarketDepthL2ProtoBuf(MarketDepthL2 marketDepthL2) { }
     public void marketDataTypeProtoBuf(MarketDataType marketDataType) { }
     public void tickReqParamsProtoBuf(TickReqParams tickReqParams) { }
-
     public void realtimeBar(int reqId, long date, double open, double high, double low, double close, decimal volume, decimal WAP, int count)
     {
         throw new NotImplementedException();

@@ -29,8 +29,8 @@ internal class Program
         var apiHost = Host.CreateDefaultBuilder(args)
             .ConfigureWebHostDefaults(webBuilder =>
             {
-                var apiPort = Environment.GetEnvironmentVariable("DOTQUANT_API_PORT") ?? "5000";
-                webBuilder.UseUrls($"http://localhost:{apiPort}");
+                var apiPort = Environment.GetEnvironmentVariable("DOTQUANT_API_PORT") ?? "5001";
+                webBuilder.UseUrls($"https://localhost:{apiPort}");
                 webBuilder.UseStartup<Startup>();
             })
             .ConfigureServices(services =>
@@ -198,6 +198,7 @@ internal class Program
                 {
                     options.SingleLine = true;
                     options.TimestampFormat = "yyyy-MM-dd HH:mm:ss.fff ";
+                    options.IncludeScopes = false;
                 });
                 logging.SetMinimumLevel(LogLevel.Information);
                 logging.AddFilter("Microsoft.*", LogLevel.Error);

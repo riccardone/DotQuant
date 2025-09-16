@@ -22,7 +22,7 @@ public class RateLimitedHttpClient
             DateTimeOffset.UtcNow - last < TimeSpan.FromSeconds(minDelaySeconds))
         {
             var wait = TimeSpan.FromSeconds(minDelaySeconds) - (DateTimeOffset.UtcNow - last);
-            _logger.LogWarning("Rate limit triggered for {Key}, waiting {Wait}", key, wait);
+            _logger.LogDebug("Rate limit triggered for {Key}, waiting {Wait}", key, wait);
             await Task.Delay(wait, ct);
         }
 
@@ -44,7 +44,7 @@ public class RateLimitedHttpClient
 
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                _logger.LogInformation("Request to {Url} returned 404 Not Found (expected in demo mode)", url);
+                _logger.LogDebug("Request to {Url} returned 404 Not Found (expected in demo mode)", url);
             }
             else
             {

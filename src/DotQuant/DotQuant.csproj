@@ -15,6 +15,7 @@
 
 		<!-- Web API / ASP.NET Core Support -->
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.3.0" />
+		<PackageReference Include="Spectre.Console" Version="0.51.1" />
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.4" />
 
 		<!-- Version conflict resolution -->
@@ -25,6 +26,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\DotQuant.Api\DotQuant.Api.csproj" />
 		<ProjectReference Include="..\DotQuant.Brokers.Trading212\DotQuant.Brokers.Trading212.csproj" />
 		<ProjectReference Include="..\DotQuant.Core\DotQuant.Core.csproj" />
 		<ProjectReference Include="..\DotQuant.Feeds.Csv\DotQuant.Feeds.Csv.csproj" />

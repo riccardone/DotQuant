@@ -2,7 +2,7 @@
 using DotQuant.Core.Services.GraphModels;
 using Microsoft.AspNetCore.Mvc;
 
-namespace DotQuant.Controllers;
+namespace DotQuant.Api.Controllers;
 
 [ApiController]
 [Route("session")]
@@ -16,8 +16,9 @@ public class SessionController : ControllerBase
     }
 
     [HttpGet("graph")]
-    public ActionResult<SessionGraphData> GetSessionGraph()
+    public async Task<ActionResult<SessionGraphData>> GetSessionGraph()
     {
-        return Ok(_provider.GetGraphDataAsync().GetAwaiter().GetResult());
+        var data = await _provider.GetGraphDataAsync();
+        return Ok(data);
     }
 }

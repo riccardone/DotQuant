@@ -7,8 +7,8 @@ namespace DotQuant.Core.Strategies;
 
 public sealed class EmaCrossover(
     ILogger<EmaCrossover> logger,
-    int fastPeriod = 12,
-    int slowPeriod = 26,
+    int fastPeriod = 3,
+    int slowPeriod = 6,
     decimal smoothing = 2.0m,
     int? minEvents = null,
     string priceType = "DEFAULT",
