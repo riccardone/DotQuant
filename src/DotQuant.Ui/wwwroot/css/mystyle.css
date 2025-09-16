@@ -1,0 +1,8 @@
+﻿.auth-brand-google {
+    background-image: url(../images/brands/google.png);
+    width: 100%;
+    height: auto;
+    max-width: 32px;
+    max-height: 32px;
+    object-fit: contain;
+}

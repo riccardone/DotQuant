@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\vendor\choices.js\public\types\src\" />
+    <Folder Include="wwwroot\vendor\choices.js\src\" />
+    <Folder Include="wwwroot\vendor\datatables.net-bs5\types\" />
+    <Folder Include="wwwroot\vendor\datatables.net-buttons-bs5\types\" />
+    <Folder Include="wwwroot\vendor\datatables.net-buttons\types\" />
+    <Folder Include="wwwroot\vendor\datatables.net-fixedcolumns-bs5\types\" />
+    <Folder Include="wwwroot\vendor\datatables.net-fixedcolumns\types\" />
+    <Folder Include="wwwroot\vendor\datatables.net-fixedheader-bs5\types\" />
+    <Folder Include="wwwroot\vendor\datatables.net-fixedheader\types\" />
+    <Folder Include="wwwroot\vendor\datatables.net-keytable-bs5\types\" />
+    <Folder Include="wwwroot\vendor\datatables.net-keytable\types\" />
+    <Folder Include="wwwroot\vendor\datatables.net-responsive-bs5\types\" />
+    <Folder Include="wwwroot\vendor\datatables.net-responsive\types\" />
+    <Folder Include="wwwroot\vendor\datatables.net-select-bs5\types\" />
+    <Folder Include="wwwroot\vendor\datatables.net-select\types\" />
+    <Folder Include="wwwroot\vendor\datatables.net\types\" />
+    <Folder Include="wwwroot\vendor\daterangepicker\example\" />
+    <Folder Include="wwwroot\vendor\flatpickr\types\" />
+    <Folder Include="wwwroot\vendor\flatpickr\utils\" />
+    <Folder Include="wwwroot\vendor\gmaps\docs\" />
+    <Folder Include="wwwroot\vendor\gmaps\examples\" />
+    <Folder Include="wwwroot\vendor\gmaps\test\" />
+    <Folder Include="wwwroot\vendor\gridjs\src\" />
+    <Folder Include="wwwroot\vendor\jquery-datatables-checkboxes\types\" />
+    <Folder Include="wwwroot\vendor\jquery.counterup\demo\" />
+    <Folder Include="wwwroot\vendor\waypoints\src\" />
+    <Folder Include="wwwroot\vendor\waypoints\test\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.3.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.2" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="3.7.1" />
+    <PackageReference Include="nlog" Version="5.4.0" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="5.4.0" />
+    <PackageReference Include="NLog.Web.AspNetCore" Version="5.4.0" />
+  </ItemGroup>
+
+</Project>

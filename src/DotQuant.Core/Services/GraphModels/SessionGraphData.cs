@@ -3,5 +3,6 @@
 public record SessionGraphData(
     List<PricePoint> Prices,
     List<SignalPoint> Signals,
-    List<OrderPoint> Orders
+    List<OrderPoint> Orders,
+    AccountInfo? Account
 );

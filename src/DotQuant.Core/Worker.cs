@@ -110,6 +110,7 @@ public class Worker
                         }
 
                         var preTradeAccount = broker.Sync();
+                        _sessionGraph.SetAccount(preTradeAccount); // <-- update account info before trading
                         var orders = trader.CreateOrders(signals, preTradeAccount, evt);
 
                         broker.PlaceOrders(orders);
@@ -126,6 +127,7 @@ public class Worker
                         }
 
                         var postTradeAccount = broker.Sync(evt);
+                        _sessionGraph.SetAccount(postTradeAccount); // <-- update account info after trading
                         journal.Track(evt, postTradeAccount, signals, orders);
                     }
                 }

@@ -89,6 +89,10 @@ internal class Program
         var startingCash = broker.Sync().CashAmount;
         var account = await appHost.Services.GetRequiredService<Worker>().RunAsync(feed, strategy, broker);
         
+        // Update session graph provider with latest account info
+        var sessionGraphProvider = appHost.Services.GetRequiredService<ISessionGraphProvider>() as InMemorySessionGraphProvider;
+        sessionGraphProvider?.SetAccount(account);
+        
         PrintAccountSummary(logger, account, startingCash);
 
         logger.LogInformation("Press Enter to exit...");

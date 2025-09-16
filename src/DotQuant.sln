@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpAPI", "External\Ibkr\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Api", "DotQuant.Api\DotQuant.Api.csproj", "{8686F306-FBCF-4506-825B-E8D19D476C43}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Ui", "DotQuant.Ui\DotQuant.Ui.csproj", "{DAD01575-874C-4C5B-BD34-CCF9D414E74A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,10 @@ Global
 		{8686F306-FBCF-4506-825B-E8D19D476C43}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8686F306-FBCF-4506-825B-E8D19D476C43}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8686F306-FBCF-4506-825B-E8D19D476C43}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DAD01575-874C-4C5B-BD34-CCF9D414E74A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DAD01575-874C-4C5B-BD34-CCF9D414E74A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DAD01575-874C-4C5B-BD34-CCF9D414E74A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DAD01575-874C-4C5B-BD34-CCF9D414E74A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

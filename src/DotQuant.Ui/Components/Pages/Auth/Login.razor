@@ -1,0 +1,84 @@
+@page "/auth-login"
+@using DotQuant.Ui.Models.ViewModels
+@using DotQuant.Ui.Services
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager NavigationManager
+
+@rendermode InteractiveServer
+
+<div class="auth-bg d-flex min-vh-100">
+    <div class="row g-0 justify-content-center w-100 m-xxl-5 px-xxl-4 m-3">
+        <div class="col-xxl-3 col-lg-5 col-md-6">
+            <a href="/" class="auth-brand d-flex justify-content-center mb-2">
+                <img src="/images/logo-dark.png" alt="dark logo" height="26" class="logo-dark">
+                <img src="/images/logo.png" alt="logo light" height="26" class="logo-light">
+            </a>
+
+            <div class="card overflow-hidden text-center p-xxl-4 p-3 mb-0">
+
+                <h4 class="fw-semibold mb-3 fs-18">Log in to your account</h4>
+
+                <EditForm Model="@Model" class="text-start mb-3" OnValidSubmit="@HandleLogin">
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <InputText @bind-Value="Model.Email" class="form-control" placeholder="Email" />
+                        <ValidationMessage For="() => Model.Email" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="example-password">Password</label>
+                        <InputText @bind-Value="Model.Password" class="form-control" placeholder="Password" type="password" />
+                        <ValidationMessage For="() => Model.Password" />
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="checkbox-signin">
+                            <label class="form-check-label" for="checkbox-signin">Remember me</label>
+                        </div>
+
+                        <a href="auth-recoverpw" class="text-muted border-bottom border-dashed">
+                            Forget
+                            Password
+                        </a>
+                    </div>
+                    <div class="d-grid">
+                        <span class="text-danger">@_errorMessage</span>
+                    </div>
+                    <div class="d-grid">
+                        @* <button class="btn btn-primary fw-semibold" type="submit">Login</button> *@
+                        <button class="btn btn-primary fw-semibold" type="submit">Login</button>
+                    </div>
+                </EditForm>
+
+                <p class="text-muted fs-14 mb-0">
+                    Don't have an account?
+                    <a href="auth-register" class="fw-semibold text-danger ms-1">Sign Up !</a>
+                </p>
+
+            </div>
+            <p class="mt-4 text-center mb-0">
+                © DotQuant Trading - By <span class="fw-bold text-decoration-underline text-uppercase text-reset fs-12">DotQuant team</span>
+            </p>
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm] public LoginViewModel Model { get; set; } = new();
+    [Parameter] public string? ReturnUrl { get; set; }
+
+    private string _errorMessage = string.Empty;
+
+    private async Task HandleLogin()
+    {
+        var isSuccess = await ((ApiAuthStateProvider)AuthProvider).LoginAsync(Model.Email, Model.Password);
+        if (!isSuccess)
+        {
+            _errorMessage = "Invalid email or password";
+            return;
+        }
+
+        NavigationManager.NavigateTo("/", forceLoad: true);
+    }
+}

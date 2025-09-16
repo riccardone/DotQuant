@@ -1,0 +1,13 @@
+﻿@using DotQuant.Ui.Services
+@inherits LayoutComponentBase
+@inject WebSocketClient WebSocketClient
+
+@Body
+
+@code {
+    public void Dispose()
+    {
+        WebSocketClient.DisconnectAsync().Wait();
+        WebSocketClient.Dispose();
+    }
+}

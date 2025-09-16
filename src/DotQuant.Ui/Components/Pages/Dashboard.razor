@@ -1,0 +1,306 @@
+@page "/"
+@using System.Text.Json.Nodes
+@using DotQuant.Ui.Services
+@rendermode InteractiveServer
+@inject IJSRuntime JsRuntime;
+@inject MessageSender MessageSender
+@inject WebSocketClient WebSocketClient
+@inject AuthService AuthService
+
+<Topbar title="Dashboard" />
+
+<div class="row row-cols-xxl-4 row-cols-md-2 row-cols-1">
+    <div class="col">
+        <AuthorizeView>
+            <Authorized>
+                <div class="card">
+                    <div class="d-flex card-header justify-content-between align-items-center">
+                        <div>
+                            <h4 class="header-title">Available funds</h4>
+                        </div>
+                        <div class="d-flex gap-2 justify-content-end text-end">
+                            @* <a href="javascript:void(0);" class="btn btn-sm btn-light">Deposit <i class="ti ti-plus ms-1"></i></a> *@
+                            <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#deposit-modal">Deposit</button>
+                            <div id="deposit-modal" class="modal fade" tabindex="-1" role="dialog"
+                                 aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-body">
+                                            <div class="auth-brand text-center mt-2 mb-4 position-relative top-0">
+                                                <a href="/" class="logo-dark">
+                                                    <span>
+                                                        <img src="/images/logo-dark.png" alt="dark logo"
+                                                             height="22">
+                                                    </span>
+                                                </a>
+                                                <a href="/" class="logo-light">
+                                                    <span>
+                                                        <img src="/images/logo.png" alt="logo"
+                                                             height="22">
+                                                    </span>
+                                                </a>
+                                            </div>
+
+                                            <form class="ps-3 pe-3" action="#">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Deposit via</label>
+                                                    <label class="form-label">HSBC 564565666</label>
+                                                    <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#deposit-modal">Change</button>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="amount" class="form-label">Amount</label>
+                                                    <input class="form-control" type="number" id="amount" required="" placeholder="0">
+                                                </div>
+                                                <div class="mb-3 text-center">
+                                                    <button class="btn btn-primary" type="submit" @onclick="Deposit">Test deposit</button>
+                                                </div>
+                                            </form>
+
+                                        </div>
+                                    </div><!-- /.modal-content -->
+                                </div><!-- /.modal-dialog -->
+                            </div><!-- /.modal -->
+                        </div>
+                        @* <div class="dropdown">
+                    <a href="#" class="dropdown-toggle drop-arrow-none card-drop" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="ri-more-2-fill fs-18"></i>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-end">
+                        <!-- item-->
+                        <a href="javascript:void(0);" class="dropdown-item">Sales Report</a>
+                        <!-- item-->
+                        <a href="javascript:void(0);" class="dropdown-item">Export Report</a>
+                        <!-- item-->
+                        <a href="javascript:void(0);" class="dropdown-item">Profit</a>
+                        <!-- item-->
+                        <a href="javascript:void(0);" class="dropdown-item">Action</a>
+                    </div>
+                </div> *@
+                    </div>
+
+                    <div class="card-body pt-0">
+                        <div class="d-flex align-items-end gap-2 justify-content-between">
+                            <div class="text-end flex-shrink-0">
+                                <div id="linked-bank-account">
+                                    <img src="/images/bank-green-64.png" alt="Bank account is linked"
+                                         width="64">
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <h3 class="fw-semibold">@AuthService.User.Financials.AvailableFunds k</h3>
+                                <p class="text-muted mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <p>You're not signed in.</p>
+            </NotAuthorized>
+        </AuthorizeView>
+    </div><!-- end col -->
+
+</div>
+<div class="row">
+    <div class="d-flex gap-3 kanban-board">
+        <div class="kanban-board-item">
+            <div class="card">
+                @* <div class="card-body">
+                    <div class="dropdown float-end">
+                        <a href="#" class="dropdown-toggle drop-arrow-none" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="ri-more-2-fill m-0 text-muted h3"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end">
+                            <a class="dropdown-item" href="#">Edit</a>
+                            <a class="dropdown-item" href="#">Delete</a>
+                            <a class="dropdown-item" href="#">Add Members</a>
+                            <a class="dropdown-item" href="#">Add Due Date</a>
+                        </div>
+                    </div> <!-- end dropdown -->
+
+                    <h4 class="header-title mb-0">Upcoming!</h4>
+                </div> *@
+
+                @* <div data-simplebar>
+                    <div class="tasklist px-3" id="upcoming">
+                        <div class="card" id="task1">
+                            <div class="card-body">
+                                <span class="badge bg-soft-danger text-danger float-end">High</span>
+                                <h5 class="mt-0"><a href="apps-task-details" class="text-dark fw-semibold">Android App homepage</a></h5>
+                                <div class="form-check float-end ps-0">
+                                    <input class="form-check-input" type="checkbox" value="">
+                                </div>
+                                <p>Design the homepage layout for the Android application with a clean and user-friendly interface.</p>
+                                <div class="clearfix"></div>
+                                <div class="row">
+                                    <div class="col">
+                                        <p class="fs-13 mt-2 mb-0"><i class="ri-calendar-event-line me-1"></i> Oct 16, 2025</p>
+                                    </div>
+                                    <div class="col-auto">
+                                        <div class="text-end">
+                                            <a href="javascript: void(0);" class="text-muted">
+                                                <img src="/images/users/avatar-1.jpg" alt="task-user" class="avatar-sm img-thumbnail rounded-circle">
+                                            </a>
+                                            <a href="javascript: void(0);" class="text-muted">
+                                                <img src="/images/users/avatar-3.jpg" alt="task-user" class="avatar-sm img-thumbnail rounded-circle">
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card" id="task2">
+                            <div class="card-body">
+                                <span class="badge bg-soft-success text-success float-end">Low</span>
+                                <h5 class="mt-0"><a href="apps-task-details" class="text-dark fw-semibold">Dashboard layout improvements</a></h5>
+                                <div class="form-check float-end ps-0">
+                                    <input class="form-check-input" type="checkbox" value="">
+                                </div>
+                                <p>Improve the layout and responsiveness of the main dashboard to enhance user experience.</p>
+                                <div class="clearfix"></div>
+                                <div class="row">
+                                    <div class="col">
+                                        <p class="fs-13 mt-2 mb-0"><i class="ri-calendar-event-line me-1"></i> Nov 22, 2025</p>
+                                    </div>
+                                    <div class="col-auto">
+                                        <div class="text-end">
+                                            <a href="javascript: void(0);" class="text-muted">
+                                                <img src="/images/users/avatar-2.jpg" alt="task-user" class="avatar-sm img-thumbnail rounded-circle">
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card" id="task3">
+                            <div class="card-body">
+                                <span class="badge bg-soft-danger text-danger float-end">High</span>
+                                <h5 class="mt-0"><a href="apps-task-details" class="text-dark fw-semibold">Invite team members to the project</a></h5>
+                                <div class="form-check float-end ps-0">
+                                    <input class="form-check-input" type="checkbox" value="">
+                                </div>
+                                <p>Send invites to new team members for the upcoming project launch and onboarding.</p>
+                                <div class="clearfix"></div>
+                                <div class="row">
+                                    <div class="col">
+                                        <p class="fs-13 mt-2 mb-0"><i class="ri-calendar-event-line me-1"></i> Oct 15, 2025</p>
+                                    </div>
+                                    <div class="col-auto">
+                                        <div class="text-end">
+                                            <a href="javascript: void(0);" class="text-muted">
+                                                <img src="/images/users/avatar-5.jpg" alt="task-user" class="avatar-sm img-thumbnail rounded-circle">
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card task-info" id="task4">
+                            <div class="card-body">
+                                <span class="badge bg-soft-warning text-warning float-end">Medium</span>
+                                <h5 class="mt-0"><a href="apps-task-details" class="text-dark fw-semibold">Prepare user guide for the new feature</a></h5>
+                                <div class="form-check float-end ps-0">
+                                    <input class="form-check-input" type="checkbox" value="">
+                                </div>
+                                <p>Prepare a comprehensive user guide for the newly added feature in the app.</p>
+                                <div class="clearfix"></div>
+                                <div class="row">
+                                    <div class="col">
+                                        <p class="fs-13 mt-2 mb-0"><i class="ri-calendar-event-line me-1"></i> Dec 03, 2025</p>
+                                    </div>
+                                    <div class="col-auto">
+                                        <div class="text-end">
+                                            <a href="javascript: void(0);" class="text-muted">
+                                                <img src="/images/users/avatar-6.jpg" alt="task-user" class="avatar-sm img-thumbnail rounded-circle">
+                                            </a>
+                                            <a href="javascript: void(0);" class="text-muted">
+                                                <img src="/images/users/avatar-7.jpg" alt="task-user" class="avatar-sm img-thumbnail rounded-circle">
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div> *@
+
+                <div class="card-body">
+                    <a href="javascript: void(0);" class="btn btn-primary w-100"><i class="ri-add-line"></i> Add New investment</a>
+                </div>
+            </div>
+        </div> <!-- end col -->
+    </div>
+</div>
+<div class="row"></div>
+
+@code {
+    private IJSObjectReference? _module;
+    private string _status = "Waiting...";
+    private string _result = string.Empty;
+    private WebSocketClient? _webSocketClient;
+    private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/pages/dashboard.js");
+            await JsRuntime.InvokeVoidAsync("loadDashboard");
+            await JsRuntime.InvokeVoidAsync("loadThemeConfig");
+            await JsRuntime.InvokeVoidAsync("loadApps");
+        }
+    }
+
+    private async Task Deposit()
+    {
+        _status = "Sending deposit command...";
+        Logger.Info("Initiating deposit command...");
+
+        var cloudEvent = new CloudEventRequest
+            {
+                Type = "DepositFunds",
+                Source = "accounting",
+                Id = Guid.NewGuid().ToString(),
+                Time = DateTime.UtcNow,
+                DataContentType = "application/json",
+                Data = JsonNode.Parse("{\"amount\": 100, \"currency\": \"USD\"}")
+            };
+
+        string? eventId = await MessageSender.SendAsync(cloudEvent);
+
+        if (!string.IsNullOrEmpty(eventId))
+        {
+            _status = $"Event sent. Waiting for result (ID: {eventId})...";
+            Logger.Info("Event {0} sent. Waiting for result...", eventId);
+
+            await WebSocketClient.ConnectAsync();
+
+            _ = WebSocketClient.ReceiveAsync(message =>
+            {
+                _result = message;
+                _status = "Result received!";
+                Logger.Info("Received result for event {0}: {1}", eventId, message);
+                StateHasChanged();
+            });
+            await WebSocketClient.SubscribeAsync($"accounting,{"todo"}");
+        }
+        else
+        {
+            _status = "Failed to send deposit event.";
+            Logger.Warn("Failed to receive event ID from API.");
+        }
+    }
+
+    private async Task OnDisposeAsync()
+    {
+        if (_webSocketClient != null)
+        {
+            await _webSocketClient.DisconnectAsync();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await OnDisposeAsync();
+    }
+}
