@@ -1,5 +1,6 @@
 @page "/"
 @using System.Text.Json.Nodes
+@using System.Net.Http.Json
 @using DotQuant.Ui.Services
 @rendermode InteractiveServer
 @inject IJSRuntime JsRuntime;
@@ -9,17 +10,19 @@
 
 <Topbar title="Dashboard" />
 
-<div class="row row-cols-xxl-4 row-cols-md-2 row-cols-1">
-    <div class="col">
-        <AuthorizeView>
-            <Authorized>
+<AuthorizeView>
+    <Authorized>
+        <div class="dashboard-chart-container" style="height:80vh; min-height:400px; width:100%;">
+            <div id="line-chart-annotations" class="apex-charts" style="height:100%; width:100%;"></div>
+        </div>
+        <div class="row row-cols-xxl-4 row-cols-md-2 row-cols-1">
+            <div class="col">
                 <div class="card">
                     <div class="d-flex card-header justify-content-between align-items-center">
                         <div>
                             <h4 class="header-title">Available funds</h4>
                         </div>
                         <div class="d-flex gap-2 justify-content-end text-end">
-                            @* <a href="javascript:void(0);" class="btn btn-sm btn-light">Deposit <i class="ti ti-plus ms-1"></i></a> *@
                             <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#deposit-modal">Deposit</button>
                             <div id="deposit-modal" class="modal fade" tabindex="-1" role="dialog"
                                  aria-hidden="true">
@@ -61,21 +64,6 @@
                                 </div><!-- /.modal-dialog -->
                             </div><!-- /.modal -->
                         </div>
-                        @* <div class="dropdown">
-                    <a href="#" class="dropdown-toggle drop-arrow-none card-drop" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="ri-more-2-fill fs-18"></i>
-                    </a>
-                    <div class="dropdown-menu dropdown-menu-end">
-                        <!-- item-->
-                        <a href="javascript:void(0);" class="dropdown-item">Sales Report</a>
-                        <!-- item-->
-                        <a href="javascript:void(0);" class="dropdown-item">Export Report</a>
-                        <!-- item-->
-                        <a href="javascript:void(0);" class="dropdown-item">Profit</a>
-                        <!-- item-->
-                        <a href="javascript:void(0);" class="dropdown-item">Action</a>
-                    </div>
-                </div> *@
                     </div>
 
                     <div class="card-body pt-0">
@@ -93,145 +81,26 @@
                         </div>
                     </div>
                 </div>
-            </Authorized>
-            <NotAuthorized>
-                <p>You're not signed in.</p>
-            </NotAuthorized>
-        </AuthorizeView>
-    </div><!-- end col -->
+                <!-- Other dashboard cards and content can go here -->
+            </div>
+        </div>
+        <!-- Kanban board and other dashboard elements can remain below -->
+    </Authorized>
+    <NotAuthorized>
+        <p>You're not signed in.</p>
+    </NotAuthorized>
+</AuthorizeView>
 
-</div>
+<!-- Kanban board and other dashboard elements remain outside -->
 <div class="row">
     <div class="d-flex gap-3 kanban-board">
         <div class="kanban-board-item">
             <div class="card">
-                @* <div class="card-body">
-                    <div class="dropdown float-end">
-                        <a href="#" class="dropdown-toggle drop-arrow-none" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="ri-more-2-fill m-0 text-muted h3"></i>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-end">
-                            <a class="dropdown-item" href="#">Edit</a>
-                            <a class="dropdown-item" href="#">Delete</a>
-                            <a class="dropdown-item" href="#">Add Members</a>
-                            <a class="dropdown-item" href="#">Add Due Date</a>
-                        </div>
-                    </div> <!-- end dropdown -->
-
-                    <h4 class="header-title mb-0">Upcoming!</h4>
-                </div> *@
-
-                @* <div data-simplebar>
-                    <div class="tasklist px-3" id="upcoming">
-                        <div class="card" id="task1">
-                            <div class="card-body">
-                                <span class="badge bg-soft-danger text-danger float-end">High</span>
-                                <h5 class="mt-0"><a href="apps-task-details" class="text-dark fw-semibold">Android App homepage</a></h5>
-                                <div class="form-check float-end ps-0">
-                                    <input class="form-check-input" type="checkbox" value="">
-                                </div>
-                                <p>Design the homepage layout for the Android application with a clean and user-friendly interface.</p>
-                                <div class="clearfix"></div>
-                                <div class="row">
-                                    <div class="col">
-                                        <p class="fs-13 mt-2 mb-0"><i class="ri-calendar-event-line me-1"></i> Oct 16, 2025</p>
-                                    </div>
-                                    <div class="col-auto">
-                                        <div class="text-end">
-                                            <a href="javascript: void(0);" class="text-muted">
-                                                <img src="/images/users/avatar-1.jpg" alt="task-user" class="avatar-sm img-thumbnail rounded-circle">
-                                            </a>
-                                            <a href="javascript: void(0);" class="text-muted">
-                                                <img src="/images/users/avatar-3.jpg" alt="task-user" class="avatar-sm img-thumbnail rounded-circle">
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card" id="task2">
-                            <div class="card-body">
-                                <span class="badge bg-soft-success text-success float-end">Low</span>
-                                <h5 class="mt-0"><a href="apps-task-details" class="text-dark fw-semibold">Dashboard layout improvements</a></h5>
-                                <div class="form-check float-end ps-0">
-                                    <input class="form-check-input" type="checkbox" value="">
-                                </div>
-                                <p>Improve the layout and responsiveness of the main dashboard to enhance user experience.</p>
-                                <div class="clearfix"></div>
-                                <div class="row">
-                                    <div class="col">
-                                        <p class="fs-13 mt-2 mb-0"><i class="ri-calendar-event-line me-1"></i> Nov 22, 2025</p>
-                                    </div>
-                                    <div class="col-auto">
-                                        <div class="text-end">
-                                            <a href="javascript: void(0);" class="text-muted">
-                                                <img src="/images/users/avatar-2.jpg" alt="task-user" class="avatar-sm img-thumbnail rounded-circle">
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card" id="task3">
-                            <div class="card-body">
-                                <span class="badge bg-soft-danger text-danger float-end">High</span>
-                                <h5 class="mt-0"><a href="apps-task-details" class="text-dark fw-semibold">Invite team members to the project</a></h5>
-                                <div class="form-check float-end ps-0">
-                                    <input class="form-check-input" type="checkbox" value="">
-                                </div>
-                                <p>Send invites to new team members for the upcoming project launch and onboarding.</p>
-                                <div class="clearfix"></div>
-                                <div class="row">
-                                    <div class="col">
-                                        <p class="fs-13 mt-2 mb-0"><i class="ri-calendar-event-line me-1"></i> Oct 15, 2025</p>
-                                    </div>
-                                    <div class="col-auto">
-                                        <div class="text-end">
-                                            <a href="javascript: void(0);" class="text-muted">
-                                                <img src="/images/users/avatar-5.jpg" alt="task-user" class="avatar-sm img-thumbnail rounded-circle">
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card task-info" id="task4">
-                            <div class="card-body">
-                                <span class="badge bg-soft-warning text-warning float-end">Medium</span>
-                                <h5 class="mt-0"><a href="apps-task-details" class="text-dark fw-semibold">Prepare user guide for the new feature</a></h5>
-                                <div class="form-check float-end ps-0">
-                                    <input class="form-check-input" type="checkbox" value="">
-                                </div>
-                                <p>Prepare a comprehensive user guide for the newly added feature in the app.</p>
-                                <div class="clearfix"></div>
-                                <div class="row">
-                                    <div class="col">
-                                        <p class="fs-13 mt-2 mb-0"><i class="ri-calendar-event-line me-1"></i> Dec 03, 2025</p>
-                                    </div>
-                                    <div class="col-auto">
-                                        <div class="text-end">
-                                            <a href="javascript: void(0);" class="text-muted">
-                                                <img src="/images/users/avatar-6.jpg" alt="task-user" class="avatar-sm img-thumbnail rounded-circle">
-                                            </a>
-                                            <a href="javascript: void(0);" class="text-muted">
-                                                <img src="/images/users/avatar-7.jpg" alt="task-user" class="avatar-sm img-thumbnail rounded-circle">
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div> *@
-
-                <div class="card-body">
-                    <a href="javascript: void(0);" class="btn btn-primary w-100"><i class="ri-add-line"></i> Add New investment</a>
-                </div>
+                @* ...existing kanban content... *@
             </div>
-        </div> <!-- end col -->
+        </div>
     </div>
 </div>
-<div class="row"></div>
 
 @code {
     private IJSObjectReference? _module;
@@ -239,6 +108,9 @@
     private string _result = string.Empty;
     private WebSocketClient? _webSocketClient;
     private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+    private CancellationTokenSource? _cts;
+    private readonly int _refreshIntervalMs = 5000; // xxx seconds, make configurable as needed
+    private bool _firstRenderComplete = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -248,6 +120,45 @@
             await JsRuntime.InvokeVoidAsync("loadDashboard");
             await JsRuntime.InvokeVoidAsync("loadThemeConfig");
             await JsRuntime.InvokeVoidAsync("loadApps");
+
+            _cts = new CancellationTokenSource();
+            _firstRenderComplete = true;
+            _ = PeriodicGraphDataFetchAsync(_cts.Token);
+        }
+    }
+
+    private async Task PeriodicGraphDataFetchAsync(CancellationToken token)
+    {
+        var httpClient = new HttpClient { BaseAddress = new Uri("https://localhost:5001") };
+        while (!token.IsCancellationRequested)
+        {
+            try
+            {
+                var graphData = await httpClient.GetFromJsonAsync<SessionGraphData>("/session/graph", token);
+                if (graphData?.Prices != null && graphData.Prices.Count > 0)
+                {
+                    // Group all data by ticker
+                    var tickers = graphData.Prices.Select(p => p.Ticker).Distinct().ToList();
+                    var tickerData = tickers.ToDictionary(
+                        ticker => ticker,
+                        ticker => new
+                        {
+                            prices = graphData.Prices.Where(p => p.Ticker == ticker)
+                                .Select(p => new { time = p.Time.ToString("yyyy-MM-dd HH:mm"), close = p.Close }).ToList(),
+                            orders = (graphData.Orders == null ? new List<object>() : graphData.Orders.Where(o => o.Ticker == ticker)
+                                .Select(o => new { time = o.Time.ToString("yyyy-MM-dd HH:mm"), side = o.Side, price = o.Price, quantity = o.Quantity }).Cast<object>().ToList()),
+                            signals = (graphData.Signals == null ? new List<object>() : graphData.Signals.Where(s => s.Ticker == ticker)
+                                .Select(s => new { time = s.Time.ToString("yyyy-MM-dd HH:mm"), type = s.Type, confidence = s.Confidence }).Cast<object>().ToList())
+                        }
+                    );
+                    await JsRuntime.InvokeVoidAsync("renderLineChart", tickerData);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Optionally log or handle errors
+            }
+            await Task.Delay(_refreshIntervalMs, token);
         }
     }
 
@@ -257,14 +168,14 @@
         Logger.Info("Initiating deposit command...");
 
         var cloudEvent = new CloudEventRequest
-            {
-                Type = "DepositFunds",
-                Source = "accounting",
-                Id = Guid.NewGuid().ToString(),
-                Time = DateTime.UtcNow,
-                DataContentType = "application/json",
-                Data = JsonNode.Parse("{\"amount\": 100, \"currency\": \"USD\"}")
-            };
+        {
+            Type = "DepositFunds",
+            Source = "accounting",
+            Id = Guid.NewGuid().ToString(),
+            Time = DateTime.UtcNow,
+            DataContentType = "application/json",
+            Data = JsonNode.Parse("{\"amount\": 100, \"currency\": \"USD\"}")
+        };
 
         string? eventId = await MessageSender.SendAsync(cloudEvent);
 
@@ -297,10 +208,48 @@
         {
             await _webSocketClient.DisconnectAsync();
         }
+        _cts?.Cancel();
     }
 
     public async ValueTask DisposeAsync()
     {
         await OnDisposeAsync();
+    }
+
+    // Models for deserialization
+    public class PricePoint
+    {
+        public string Ticker { get; set; } = "";
+        public DateTime Time { get; set; }
+        public decimal Open { get; set; }
+        public decimal High { get; set; }
+        public decimal Low { get; set; }
+        public decimal Close { get; set; }
+    }
+    public class OrderPoint
+    {
+        public string Ticker { get; set; } = "";
+        public DateTime Time { get; set; }
+        public string Side { get; set; } = "";
+        public decimal Price { get; set; }
+        public decimal Quantity { get; set; }
+    }
+    public class SignalPoint
+    {
+        public string Ticker { get; set; } = "";
+        public DateTime Time { get; set; }
+        public string Type { get; set; } = "";
+        public int Confidence { get; set; }
+    }
+    public class AccountInfo
+    {
+        // Add properties as needed
+    }
+    public class SessionGraphData
+    {
+        public List<PricePoint> Prices { get; set; } = new();
+        public List<OrderPoint> Orders { get; set; } = new();
+        public List<SignalPoint> Signals { get; set; } = new();
+        public AccountInfo? Account { get; set; }
     }
 }

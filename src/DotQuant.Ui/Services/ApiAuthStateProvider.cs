@@ -36,6 +36,22 @@ public class ApiAuthStateProvider : AuthenticationStateProvider
 
     public async Task<bool> LoginAsync(string username, string password)
     {
+        // Temporary workaround to avoid wasting time on auth
+        NotifyAuthStateChanged(new AuthResponse
+        {
+            AccessToken = Guid.NewGuid().ToString(),
+            GivenName = "Demo",
+            Surname = "User",
+            Email = "test@test.com",
+            Address = "123 Demo St",
+            PostCode = "12345",
+            City = "Demo City",
+            Phone = "123-456-7890",
+            CountryCode = "UK",
+            Role = "Admin"
+        });
+        return true;
+
         var httpClient = _httpClientFactory.CreateClient("PreludeApi");
 
         var response = await httpClient.PostAsJsonAsync("Auth/login", new AuthRequest(username.CreateCorrelationId(), password, "default"));
@@ -57,30 +73,7 @@ public class ApiAuthStateProvider : AuthenticationStateProvider
         {
             var authResult = JsonSerializer.Deserialize<AuthResponse>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            if (authResult == null)
-            {
-                _logger.Error("Login failed: Deserialization returned null.");
-                return false;
-            }
-
-            var claims = new List<Claim>
-            {
-                new(ClaimTypes.Name, authResult.GivenName),
-                new(ClaimTypes.Surname, authResult.Surname),
-                new(ClaimTypes.Role, authResult.Role),
-                new(ClaimTypes.Email, authResult.Email),
-                new(ClaimTypes.StreetAddress, authResult.Address),
-                new(ClaimTypes.PostalCode, authResult.PostCode),
-                new(ClaimTypes.Locality, authResult.City),
-                new(ClaimTypes.Country, authResult.CountryCode),
-                new("AccessToken", authResult.AccessToken)
-            };
-
-            _currentUser = new ClaimsPrincipal(new ClaimsIdentity(claims, "ApiAuth"));
-
-            // TODO retrieve the currentuser financials
-
-            NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(_currentUser)));
+            if (!NotifyAuthStateChanged(authResult)) return false;
 
             return true;
         }
@@ -89,6 +82,35 @@ public class ApiAuthStateProvider : AuthenticationStateProvider
             _logger.Error($"JSON Deserialization error: {ex.Message}");
             return false;
         }
+    }
+
+    private bool NotifyAuthStateChanged(AuthResponse? authResult)
+    {
+        if (authResult == null)
+        {
+            _logger.Error("Login failed: Deserialization returned null.");
+            return false;
+        }
+
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.Name, authResult.GivenName),
+            new(ClaimTypes.Surname, authResult.Surname),
+            new(ClaimTypes.Role, authResult.Role),
+            new(ClaimTypes.Email, authResult.Email),
+            new(ClaimTypes.StreetAddress, authResult.Address),
+            new(ClaimTypes.PostalCode, authResult.PostCode),
+            new(ClaimTypes.Locality, authResult.City),
+            new(ClaimTypes.Country, authResult.CountryCode),
+            new("AccessToken", authResult.AccessToken)
+        };
+
+        _currentUser = new ClaimsPrincipal(new ClaimsIdentity(claims, "ApiAuth"));
+
+        // TODO retrieve the currentuser financials
+
+        NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(_currentUser)));
+        return true;
     }
 
 

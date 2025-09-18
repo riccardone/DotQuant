@@ -27,6 +27,8 @@ public sealed class EmaCrossover(
     /// Cooldown before reentry after a recycle exit.
     /// </summary>
     private readonly TimeSpan _reentryCooldown = TimeSpan.FromHours(1);
+    private readonly int _trendConfirmationCount = 3; // configurable: number of consecutive upward signals required
+    private readonly Dictionary<IAsset, int> _uptrendCount = new();
 
     public List<Signal> CreateSignals(Event evt)
     {
@@ -50,6 +52,7 @@ public sealed class EmaCrossover(
         {
             calculator = new EMACalculator(price, _fastAlpha, _slowAlpha);
             _calculators[asset] = calculator;
+            _uptrendCount[asset] = 0;
             return null; // Skip signal on first tick
         }
 
@@ -63,8 +66,29 @@ public sealed class EmaCrossover(
         if (!hasLast)
         {
             _lastDirection[asset] = currentDirection;
-
+            _uptrendCount[asset] = currentDirection == 1.0m ? 1 : 0;
             return new Signal(asset, currentDirection, SignalType.Entry, TradeIntent.Entry);
+        }
+
+        // Track consecutive uptrend
+        if (currentDirection == 1.0m)
+        {
+            _uptrendCount[asset] = lastDirection == 1.0m ? _uptrendCount[asset] + 1 : 1;
+            _lastDirection[asset] = currentDirection;
+
+            // Emit buy if uptrend confirmed
+            if (_uptrendCount[asset] >= _trendConfirmationCount)
+            {
+                logger.LogInformation("[Signal] {Asset} @ {Price} | Uptrend confirmed for {Count} bars | Type=Entry", asset.Symbol, price, _uptrendCount[asset]);
+                _uptrendCount[asset] = 0; // reset after signal
+                return new Signal(asset, currentDirection, SignalType.Entry, TradeIntent.Entry);
+            }
+            // Otherwise, keep holding
+            return null;
+        }
+        else
+        {
+            _uptrendCount[asset] = 0;
         }
 
         // Detect crossover → generate Exit or Entry signal

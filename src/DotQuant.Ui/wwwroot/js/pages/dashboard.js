@@ -282,3 +282,96 @@ window.loadDashboard = function () {
 
   chart.render();
 };
+
+window.renderLineChart = function (tickerData) {
+    var colors = ["#39afd1", "#fa5c7c", "#727cf5", "#0acf97", "#ffbc00", "#5b69bc", "#10c469", "#f9c851"];
+    var tickers = Object.keys(tickerData);
+    var series = [];
+    var annotations = { xaxis: [] };
+    var legend = { show: true };
+
+    // Use a persistent chart instance to avoid full redraw
+    if (!window._dashboardChart) {
+        var options = {
+            series: [],
+            chart: {
+                type: "line",
+                height: "100%",
+                width: "100%",
+                id: "dashboardChart",
+                animations: {
+                    enabled: false
+                }
+            },
+            xaxis: {
+                categories: []
+            },
+            colors: colors,
+            legend: legend,
+            annotations: { xaxis: [] },
+            tooltip: {
+                shared: true,
+                custom: function({series, seriesIndex, dataPointIndex, w}) {
+                    var ticker = tickers[seriesIndex];
+                    var orderLabels = tickerData[ticker].orders
+                        .filter(o => o.time === w.globals.categoryLabels[dataPointIndex])
+                        .map(o => "Order: " + o.side + " @ " + o.price).join("<br>");
+                    var signalLabels = tickerData[ticker].signals
+                        .filter(s => s.time === w.globals.categoryLabels[dataPointIndex])
+                        .map(s => "Signal: " + s.type + " (" + s.confidence + ")").join("<br>");
+                    return orderLabels + (orderLabels && signalLabels ? "<br>" : "") + signalLabels;
+                }
+            }
+        };
+        window._dashboardChart = new ApexCharts(document.querySelector("#line-chart-annotations"), options);
+        window._dashboardChart.render();
+        // Make chart fill parent container
+        document.querySelector("#line-chart-annotations").style.height = "100%";
+        document.querySelector("#line-chart-annotations").style.width = "100%";
+    }
+
+    // Prepare new series and annotations
+    tickers.forEach(function (ticker, idx) {
+        var prices = tickerData[ticker].prices.map(p => p.close);
+        var labels = tickerData[ticker].prices.map(p => p.time);
+        series.push({
+            name: ticker + " (" + tickerData[ticker].orders.length + " orders, " + tickerData[ticker].signals.length + " signals)",
+            data: prices
+        });
+        tickerData[ticker].orders.forEach(function (order) {
+            annotations.xaxis.push({
+                x: order.time,
+                borderColor: colors[idx % colors.length],
+                label: {
+                    text: ticker + " Order: " + order.side,
+                    style: {
+                        background: colors[idx % colors.length],
+                        color: '#fff'
+                    }
+                }
+            });
+        });
+        tickerData[ticker].signals.forEach(function (signal) {
+            annotations.xaxis.push({
+                x: signal.time,
+                borderColor: colors[idx % colors.length],
+                label: {
+                    text: ticker + " Signal: " + signal.type,
+                    style: {
+                        background: colors[idx % colors.length],
+                        color: '#fff'
+                    }
+                }
+            });
+        });
+    });
+
+    // Update chart data without full redraw
+    window._dashboardChart.updateOptions({
+        series: series,
+        xaxis: {
+            categories: tickerData[tickers[0]].prices.map(p => p.time)
+        },
+        annotations: annotations
+    }, false, true);
+};
