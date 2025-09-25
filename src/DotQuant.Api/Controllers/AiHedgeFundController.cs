@@ -21,7 +21,7 @@ public class AiHedgeFundController : Controller
         if (string.IsNullOrWhiteSpace(agentId) || string.IsNullOrWhiteSpace(ticker))
             return BadRequest("AgentId and ticker are required.");
 
-        var result = await _provider.GetGraphDataAsync(agentId, ticker);
+        var result = await _provider.PerformAnalysisAsync(agentId, ticker);
         if (result == null)
             return NotFound();
 

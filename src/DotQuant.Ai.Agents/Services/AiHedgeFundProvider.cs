@@ -1,50 +1,40 @@
 using DotQuant.Core.Services.AnalysisModels;
 using DotQuant.Core.Services;
 using DotQuant.Ai.Contracts.Model;
-using System.Threading.Tasks;
 
 namespace DotQuant.Ai.Agents.Services;
 
-public class AiHedgeFundProvider : IAiHedgeFundProvider
+public class AiHedgeFundProvider(
+    TradingInitializer initializer,
+    PortfolioManager portfolioManager,
+    RiskManagerAgent riskManagerAgent)
+    : IAiHedgeFundProvider
 {
-    private readonly TradingInitializer _initializer;
-    private readonly PortfolioManager _portfolioManager;
-    private readonly RiskManagerAgent _riskManagerAgent;
-
-    public AiHedgeFundProvider(
-        TradingInitializer initializer,
-        PortfolioManager portfolioManager,
-        RiskManagerAgent riskManagerAgent)
-    {
-        _initializer = initializer;
-        _portfolioManager = portfolioManager;
-        _riskManagerAgent = riskManagerAgent;
-    }
-
-    public async Task<TickerAnalysisResult?> GetGraphDataAsync(string agentId, string ticker)
+    public async Task<TickerAnalysisResult?> PerformAnalysisAsync(string agentId, string ticker)
     {
         // Initialize workflow state for the requested ticker and agent
-        var state = await _initializer.InitializeAsync();
-        state.SelectedAnalysts = new List<string> { agentId };
-        state.Tickers = new List<string> { ticker };
+        var state = await initializer.InitializeAsync();
+        state.SelectedAnalysts = [agentId];
+        state.Tickers = [ticker];
 
         // Evaluate agent and run risk assessment
-        _portfolioManager.Evaluate(agentId, state);
-        _portfolioManager.RunRiskAssessments(state, _riskManagerAgent);
+        portfolioManager.Evaluate(agentId, state);
+        portfolioManager.RunRiskAssessments(state, riskManagerAgent);
 
         // Extract the agent report for the ticker
-        if (state.AnalystSignals.TryGetValue(agentId, out var tickerReports) &&
-            tickerReports.TryGetValue(ticker, out var agentReport) &&
-            agentReport != null)
-        {
-            // Map AgentReport to TickerAnalysisResult (expand as needed)
-            var result = new TickerAnalysisResult
-            {
-                // TODO: Map fields from agentReport and state as needed
-            };
-            return result;
-        }
+        if (!state.AnalystSignals.TryGetValue(agentId, out var tickerReports) ||
+            !tickerReports.TryGetValue(ticker, out var agentReport) ||
+            agentReport == null) return null;
 
-        return null;
+        // Map AgentReport directly to TickerAnalysisResult
+        var result = new TickerAnalysisResult
+        {
+            AgentName = agentReport.AgentName,
+            TradeSignal = agentReport.TradeSignal,
+            Confidence = agentReport.Confidence,
+            Reasoning = agentReport.Reasoning,
+            FinancialAnalysisResults = agentReport.FinancialAnalysisResults?.ToList() ?? new List<FinancialAnalysisResult>()
+        };
+        return result;
     }
 }

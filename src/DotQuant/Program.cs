@@ -8,6 +8,7 @@ using DotQuant.Core.Services;
 using DotQuant.Core.Strategies;
 using DotQuant.Feeds.Csv;
 using DotQuant.Feeds.Ibkr;
+using DotQuant.Ai.Agents.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,6 +38,8 @@ internal class Program
             .ConfigureServices(services =>
             {
                 services.AddSingleton(appHost.Services.GetRequiredService<ISessionGraphProvider>());
+                services.AddEndpointsApiExplorer();
+                services.AddSwaggerGen();
             })
             .Build();
 
@@ -82,8 +85,8 @@ internal class Program
 
         var feedFactories = appHost.Services.GetServices<IFeedFactory>().ToList();
         var feedFactory = feedFactories.FirstOrDefault(f =>
-                              string.Equals(f.Key, feedType, StringComparison.OrdinalIgnoreCase))
-                          ?? throw new ArgumentException($"Invalid feed type: {feedType}. Available: {string.Join(", ", feedFactories.Select(f => f.Key))}");
+                                  string.Equals(f.Key, feedType, StringComparison.OrdinalIgnoreCase))
+                              ?? throw new ArgumentException($"Invalid feed type: {feedType}. Available: {string.Join(", ", feedFactories.Select(f => f.Key))}");
 
         var feed = feedFactory.Create(appHost.Services, config, logger, argsMap);
 
@@ -228,6 +231,7 @@ internal class Program
                 services.AddSingleton<IFeedFactory, IbkrFeedFactory>();
 
                 services.AddSingleton<ISessionGraphProvider, InMemorySessionGraphProvider>();
+                services.AddSingleton<IAiHedgeFundProvider, AiHedgeFundProvider>();
 
                 RegisterDynamicPlugins(services);
             });

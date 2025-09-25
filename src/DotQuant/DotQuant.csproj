@@ -32,6 +32,7 @@
 		<ProjectReference Include="..\DotQuant.Core\DotQuant.Core.csproj" />
 		<ProjectReference Include="..\DotQuant.Feeds.Csv\DotQuant.Feeds.Csv.csproj" />
 		<ProjectReference Include="..\DotQuant.Feeds.Ibkr\DotQuant.Feeds.Ibkr.csproj" />
+		<ProjectReference Include="..\DotQuant.Ai.Agents\DotQuant.Ai.Agents.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
