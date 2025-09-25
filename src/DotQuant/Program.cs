@@ -221,6 +221,7 @@ internal class Program
 
                 services.AddSingleton<IStrategy, EmaCrossover>();
                 services.AddSingleton<IBrokerFactory, Trading212BrokerFactory>();
+                services.AddSingleton<IBrokerFactory, IBKRBrokerFactory>();
                 services.AddSingleton<IBrokerFactory, SimBrokerFactory>();
                 services.AddSingleton<IBrokerFactoryRegistry, BrokerFactoryRegistry>();
                 services.AddSingleton<IFeedFactory, CsvFeedFactory>();
