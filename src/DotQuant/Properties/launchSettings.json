@@ -2,7 +2,7 @@
   "profiles": {
     "DotQuant": {
       "commandName": "Project",
-      "commandLineArgs": "--feed ibkr --broker trading212 --tickers EXS1.IBIS --live --interval 00:00:10"
+      "commandLineArgs": "--feed csv --broker sim --interval 00:00:10"
     },
     "Container (Dockerfile)": {
       "commandName": "Docker"
