@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Reflection;
+﻿using DotQuant.Brokers.IBKR;
 using DotQuant.Brokers.Trading212;
 using DotQuant.Core;
 using DotQuant.Core.Brokers;
@@ -14,6 +13,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
+using System.Reflection;
 
 namespace DotQuant;
 

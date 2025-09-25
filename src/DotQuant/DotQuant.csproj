@@ -27,6 +27,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\DotQuant.Api\DotQuant.Api.csproj" />
+		<ProjectReference Include="..\DotQuant.Brokers.IBKR\DotQuant.Brokers.IBKR.csproj" />
 		<ProjectReference Include="..\DotQuant.Brokers.Trading212\DotQuant.Brokers.Trading212.csproj" />
 		<ProjectReference Include="..\DotQuant.Core\DotQuant.Core.csproj" />
 		<ProjectReference Include="..\DotQuant.Feeds.Csv\DotQuant.Feeds.Csv.csproj" />
