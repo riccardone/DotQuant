@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36408.4
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant", "DotQuant\DotQuant.csproj", "{BD723F71-93F8-4695-8BD7-186E82B1F4D4}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Core", "DotQuant.Core\DotQuant.Core.csproj", "{E52AA07D-3A94-478F-BC8E-BB63A7FE89C3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Brokers.Trading212", "DotQuant.Brokers.Trading212\DotQuant.Brokers.Trading212.csproj", "{2A67F406-1A9C-4A91-B690-3881F6B2B21B}"
@@ -19,8 +17,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Ibkr", "Ibkr", "{BE73D1CE-F
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpAPI", "External\Ibkr\client\CSharpAPI.csproj", "{A072CA4B-D48B-1803-B653-36CADB71F3FF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Api", "DotQuant.Api\DotQuant.Api.csproj", "{8686F306-FBCF-4506-825B-E8D19D476C43}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Ui", "DotQuant.Ui\DotQuant.Ui.csproj", "{DAD01575-874C-4C5B-BD34-CCF9D414E74A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Ai.Contracts", "DotQuant.Ai.Contracts\DotQuant.Ai.Contracts.csproj", "{B7991F6B-2693-4899-B90F-C7D30744F1BF}"
@@ -33,16 +29,23 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Tests", "DotQuant.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Brokers.IBKR", "DotQuant.Brokers.IBKR\DotQuant.Brokers.IBKR.csproj", "{D7330176-D7BC-04E6-14F2-7D458F4BD341}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
+	ProjectSection(SolutionItems) = preProject
+		.github\copilot-instructions.md = .github\copilot-instructions.md
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Api", "DotQuant.Api\DotQuant.Api.csproj", "{45BBB1B2-1811-4875-8995-D528996FF174}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Api.Contracts", "DotQuant.Api.Contracts\DotQuant.Api.Contracts.csproj", "{54AB7A3B-2463-4F84-ABCD-CE6D6A56A8D7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Api.Services", "DotQuant.Api.Services\DotQuant.Api.Services.csproj", "{D1101F15-3996-43CE-A7F2-0E2FBB2D5DCB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{BD723F71-93F8-4695-8BD7-186E82B1F4D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{BD723F71-93F8-4695-8BD7-186E82B1F4D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BD723F71-93F8-4695-8BD7-186E82B1F4D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{BD723F71-93F8-4695-8BD7-186E82B1F4D4}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E52AA07D-3A94-478F-BC8E-BB63A7FE89C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E52AA07D-3A94-478F-BC8E-BB63A7FE89C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E52AA07D-3A94-478F-BC8E-BB63A7FE89C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -63,10 +66,6 @@ Global
 		{A072CA4B-D48B-1803-B653-36CADB71F3FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A072CA4B-D48B-1803-B653-36CADB71F3FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A072CA4B-D48B-1803-B653-36CADB71F3FF}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8686F306-FBCF-4506-825B-E8D19D476C43}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8686F306-FBCF-4506-825B-E8D19D476C43}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8686F306-FBCF-4506-825B-E8D19D476C43}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8686F306-FBCF-4506-825B-E8D19D476C43}.Release|Any CPU.Build.0 = Release|Any CPU
 		{DAD01575-874C-4C5B-BD34-CCF9D414E74A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DAD01575-874C-4C5B-BD34-CCF9D414E74A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DAD01575-874C-4C5B-BD34-CCF9D414E74A}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -91,6 +90,18 @@ Global
 		{D7330176-D7BC-04E6-14F2-7D458F4BD341}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D7330176-D7BC-04E6-14F2-7D458F4BD341}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D7330176-D7BC-04E6-14F2-7D458F4BD341}.Release|Any CPU.Build.0 = Release|Any CPU
+		{45BBB1B2-1811-4875-8995-D528996FF174}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{45BBB1B2-1811-4875-8995-D528996FF174}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{45BBB1B2-1811-4875-8995-D528996FF174}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{45BBB1B2-1811-4875-8995-D528996FF174}.Release|Any CPU.Build.0 = Release|Any CPU
+		{54AB7A3B-2463-4F84-ABCD-CE6D6A56A8D7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{54AB7A3B-2463-4F84-ABCD-CE6D6A56A8D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{54AB7A3B-2463-4F84-ABCD-CE6D6A56A8D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{54AB7A3B-2463-4F84-ABCD-CE6D6A56A8D7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D1101F15-3996-43CE-A7F2-0E2FBB2D5DCB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1101F15-3996-43CE-A7F2-0E2FBB2D5DCB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1101F15-3996-43CE-A7F2-0E2FBB2D5DCB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1101F15-3996-43CE-A7F2-0E2FBB2D5DCB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

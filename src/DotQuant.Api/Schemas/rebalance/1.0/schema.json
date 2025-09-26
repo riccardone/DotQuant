@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "CorrelationId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 256
+    },
+    "TargetQuantities": {
+      "type": "object",
+      "patternProperties": {
+        "^[A-Z0-9.\\-]+\\|[A-Z0-9.\\-]+$": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "TenantId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 256
+    }
+  },
+  "required": [
+    "CorrelationId",
+    "TargetQuantities",
+    "TenantId"
+  ],
+  "additionalProperties": false
+}

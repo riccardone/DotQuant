@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "Ticker": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10
+    },
+    "Market": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20
+    },
+    "Quantity": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "PricePerUnit": {
+      "type": "number",
+      "minimum": 0.0001
+    },
+    "Currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "BankAccountId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 100
+    },
+    "CorrelationId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 256
+    },
+    "TransactionId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 256
+    },
+    "TenantId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 256
+    }
+  },
+  "required": [
+    "Ticker",
+    "Market",
+    "Quantity",
+    "PricePerUnit",
+    "Currency",
+    "BankAccountId",
+    "CorrelationId",
+    "TransactionId",
+    "TenantId"
+  ],
+  "additionalProperties": false
+}

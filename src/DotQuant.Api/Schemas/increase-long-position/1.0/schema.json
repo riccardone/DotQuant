@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "CorrelationId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 256
+    },
+    "Ticker": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10
+    },
+    "Market": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20
+    },
+    "Quantity": {
+      "type": "number",
+      "minimum": 0.0001
+    },
+    "TenantId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 256
+    }
+  },
+  "required": [
+    "CorrelationId",
+    "Ticker",
+    "Market",
+    "Quantity",
+    "TenantId"
+  ],
+  "additionalProperties": false
+}

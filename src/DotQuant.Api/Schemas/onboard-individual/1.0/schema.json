@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "CorrelationId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 256
+    },
+    "Email": {
+      "type": "string",
+      "format": "email",
+      "minLength": 5,
+      "maxLength": 256,
+      "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+    },
+    "Password": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 100
+    },
+    "FirstName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "LastName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "Address": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "PostCode": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20
+    },
+    "City": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "Phone": {
+      "type": "string",
+      "pattern": "^\\+?[0-9\\-\\s]{7,15}$"
+    },
+    "CountryCode": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}(?:-[A-Z]{3})?$"
+    },
+    "TenantId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 256
+    }
+  },
+  "required": [
+    "CorrelationId",
+    "Email",
+    "Password",
+    "FirstName",
+    "LastName",
+    "Address",
+    "PostCode",
+    "City",
+    "Phone",
+    "CountryCode",
+    "TenantId"
+  ],
+  "additionalProperties": false
+}

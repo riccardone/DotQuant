@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "CorrelationId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 256
+    },
+    "TransactionId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 256
+    },
+    "BankAccountId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 100
+    },
+    "Currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "Amount": {
+      "type": "number",
+      "minimum": 0.01
+    },
+    "TenantId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 256
+    }
+  },
+  "required": [
+    "CorrelationId",
+    "TransactionId",
+    "BankAccountId",
+    "Currency",
+    "Amount",
+    "TenantId"
+  ],
+  "additionalProperties": false
+}
