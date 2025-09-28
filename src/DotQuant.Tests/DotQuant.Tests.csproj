@@ -21,9 +21,4 @@
 		<PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\DotQuant.Ai.Agents\DotQuant.Ai.Agents.csproj" />
-		<ProjectReference Include="..\DotQuant.Ai.Contracts\DotQuant.Ai.Contracts.csproj" />
-	</ItemGroup>
-
 </Project>

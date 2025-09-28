@@ -1,9 +1,9 @@
 ﻿using DotQuant.Api.Contracts;
 using DotQuant.Api.Contracts.Models.Trading;
 
-namespace DotQuant.Api.Services
+namespace DotQuant.Api.Code
 {
-    public class FakeDataReader : IDataReader
+    public class FakeApiDataReader : IDataReader
     {
         public bool ConfirmApiKey(string tenantId, string apiKey)
         {

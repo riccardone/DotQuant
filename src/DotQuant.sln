@@ -19,12 +19,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpAPI", "External\Ibkr\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Ui", "DotQuant.Ui\DotQuant.Ui.csproj", "{DAD01575-874C-4C5B-BD34-CCF9D414E74A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Ai.Contracts", "DotQuant.Ai.Contracts\DotQuant.Ai.Contracts.csproj", "{B7991F6B-2693-4899-B90F-C7D30744F1BF}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Ai.Data", "DotQuant.Ai.Data\DotQuant.Ai.Data.csproj", "{CF5489FF-1045-4AEE-ABA4-61C3BB751B08}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Ai.Agents", "DotQuant.Ai.Agents\DotQuant.Ai.Agents.csproj", "{055D275A-3CF1-41AD-89E2-C5EBB0418124}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Tests", "DotQuant.Tests\DotQuant.Tests.csproj", "{8E9C8F82-1D81-40A3-ACF4-10BD82719DDB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotQuant.Brokers.IBKR", "DotQuant.Brokers.IBKR\DotQuant.Brokers.IBKR.csproj", "{D7330176-D7BC-04E6-14F2-7D458F4BD341}"
@@ -70,18 +64,6 @@ Global
 		{DAD01575-874C-4C5B-BD34-CCF9D414E74A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DAD01575-874C-4C5B-BD34-CCF9D414E74A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DAD01575-874C-4C5B-BD34-CCF9D414E74A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B7991F6B-2693-4899-B90F-C7D30744F1BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B7991F6B-2693-4899-B90F-C7D30744F1BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B7991F6B-2693-4899-B90F-C7D30744F1BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B7991F6B-2693-4899-B90F-C7D30744F1BF}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CF5489FF-1045-4AEE-ABA4-61C3BB751B08}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CF5489FF-1045-4AEE-ABA4-61C3BB751B08}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CF5489FF-1045-4AEE-ABA4-61C3BB751B08}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CF5489FF-1045-4AEE-ABA4-61C3BB751B08}.Release|Any CPU.Build.0 = Release|Any CPU
-		{055D275A-3CF1-41AD-89E2-C5EBB0418124}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{055D275A-3CF1-41AD-89E2-C5EBB0418124}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{055D275A-3CF1-41AD-89E2-C5EBB0418124}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{055D275A-3CF1-41AD-89E2-C5EBB0418124}.Release|Any CPU.Build.0 = Release|Any CPU
 		{8E9C8F82-1D81-40A3-ACF4-10BD82719DDB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{8E9C8F82-1D81-40A3-ACF4-10BD82719DDB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8E9C8F82-1D81-40A3-ACF4-10BD82719DDB}.Release|Any CPU.ActiveCfg = Release|Any CPU
