@@ -11,6 +11,7 @@
   <ItemGroup>
     <PackageReference Include="AiHedgeFund.Agents" Version="0.2.11" />
     <PackageReference Include="AiHedgeFund.Contracts" Version="0.2.11" />
+    <PackageReference Include="aihedgefund.data" Version="0.2.11" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.9" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.9" />
     <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.OpenApi" Version="1.5.1" />
